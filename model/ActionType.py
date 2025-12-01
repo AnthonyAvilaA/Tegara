@@ -1,12 +1,11 @@
 from enum import Enum
 
 class ActionType(Enum):
-    ONE_CLICK = 1
-    DOUBLE_CLICK = 2
-    DRAG = 3
-    UNDO = 4
-    REDO = 5
-    IDLE = 6
-    ROTATE = 7
-    BUTTON_PRESS = 8
-    BUTTON_RELEASE = 9
+    LEFT_CLICK = 1
+    RIGHT_CLICK = 2
+    LEFT_BUTTON_DOWN = 3
+    LEFT_BUTTON_UP = 4
+    RIGHT_BUTTON_DOWN = 5
+    RIGHT_BUTTON_UP = 6
+    LEFT_DRAG = 7
+    RIGHT_DRAG = 8

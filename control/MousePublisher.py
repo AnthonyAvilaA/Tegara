@@ -11,3 +11,6 @@ class MousePublisher:
     def notify_click(self, event: Event) -> None:
         if self.subscriber:
             self.subscriber.on_mouse_event(event)
+    
+    def clear_subscriber(self) -> None:
+        self.subscriber = None
