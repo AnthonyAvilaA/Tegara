@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from model.Command import Command
+from control.Command import Command
 from model.ActionType import ActionType
 
 class Clickeable(ABC):

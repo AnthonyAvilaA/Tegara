@@ -8,3 +8,5 @@ class ActionType(Enum):
     REDO = 5
     IDLE = 6
     ROTATE = 7
+    BUTTON_PRESS = 8
+    BUTTON_RELEASE = 9

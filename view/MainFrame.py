@@ -2,12 +2,14 @@ import cv2
 from model.Clickeable import Clickeable
 
 class MainFrame:
-    def __init__(self):
+    def __init__(self, width: int = 800, height: int = 600) -> None:
         self.__title = "AirCanvas"
         self.__layers = []
         self.__UI = []
+        self.__width = width
+        self.__height = height
         cv2.namedWindow(self.__title, cv2.WINDOW_AUTOSIZE)
-        cv2.resizeWindow(self.__title, 800, 600)
+        cv2.resizeWindow(self.__title, width, height)
         self.redraw()
     
     def redraw(self) -> None:
