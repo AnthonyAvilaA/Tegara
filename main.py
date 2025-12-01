@@ -1,5 +1,5 @@
 from control.MouseListener import MouseListener
-from model.Canvas import Canvas
+from view.Canvas import Canvas
 from model.Color import Color
 from view.MainFrame import MainFrame
 from control.MousePublisher import MousePublisher

@@ -1,6 +1,6 @@
 from control.commands.CanvasDrawCommand import CanvasDrawCommand
 from control.CommandHandler import CommandHandler
-from model.Canvas import Canvas
+from view.Canvas import Canvas
 from model.Event import Event
 from model.Color import Color
 from model.ActionType import ActionType

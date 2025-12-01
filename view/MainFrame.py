@@ -1,4 +1,4 @@
-from model.Canvas import Canvas
+from view.Canvas import Canvas
 from model.Clickeable import Clickeable
 import numpy as np
 import cv2

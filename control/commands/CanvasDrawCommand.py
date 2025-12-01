@@ -2,7 +2,7 @@ from control.Command import Command
 from control.MouseListener import MouseListener
 from model.Point import Point
 from model.Color import Color
-from model.Canvas import Canvas
+from view.Canvas import Canvas
 from model.CanvasPixel import CanvasPixel 
 
 
