@@ -6,8 +6,8 @@ import cv2
 class MainFrame:
     def __init__(self, width: int = 800, height: int = 600) -> None:
         self.__title = "AirCanvas"
-        self.__layers = []
-        self.__UI = []
+        self.__layers: list[Canvas] = []
+        self.__UI: list[Clickeable] = []
         self.__width = width
         self.__height = height
         self.__rotation = 0.0
@@ -19,18 +19,22 @@ class MainFrame:
     def redraw(self) -> None:
         image = np.zeros((self.__height, self.__width, 3), dtype=np.uint8)
         for layer in self.__layers:
-            image = cv2.addWeighted(image, 1, layer.get_image(), 1, 0)
+            self.draw_element(image, layer)
         
         for element in self.__UI:
-            element_image = element.get_image()
-            center_x, center_y = element._center
-            img_height, img_width = element_image.shape[:2]
-            top_left_x = center_x - img_width // 2
-            top_left_y = center_y - img_height // 2
-            image[top_left_y:top_left_y + img_height, top_left_x:top_left_x + img_width] = cv2.addWeighted(
-                image[top_left_y:top_left_y + img_height, top_left_x:top_left_x + img_width], 1,
-                element_image, 1, 0)
+            self.draw_element(image, element)
         cv2.imshow(self.__title, image)
+
+    def draw_element(self, image: np.ndarray, element: Clickeable):
+        x = element.get_x()
+        y = element.get_y()
+        h = element.get_height()
+        w = element.get_width()
+        # Asegurense que no se salga de los bordes
+        if y + h > self.__height or x + w > self.__width:
+            print("UI element out of bounds")
+            return
+        image[y:y+h, x:x+w] = element.get_image()
 
     def add_cursor_listener(self, listener) -> None:
         cv2.setMouseCallback(self.__title, listener)

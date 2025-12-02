@@ -8,13 +8,19 @@ from model.ActionType import ActionType
 from control.handlers.CanvasHandler import CanvasHandler
 from control.Command import Command
 from model.Point import Point
+from view.ColorPicker import ColorPicker
 import cv2
 
 mainFrame = MainFrame()
 mouse_publisher = MousePublisher()
 command_history = []
-color = Color(0, 0, 255)  # Default color set to black
+color = Color(50, 50, 255)  # Default color set to black
 draw_size = 10  # Default draw size
+
+# temporal
+def set_color(new_color: Color):
+    global color
+    color = new_color
 
 # temporal
 def change_draw_size(flags: int):
@@ -40,6 +46,10 @@ def handle_button_down(event: Event):
         canvas_handler = CanvasHandler(UIElement, event, color, draw_size)
         command = canvas_handler.get_command()
         start_command(command)
+    elif isinstance(UIElement, ColorPicker):
+        picked_color = UIElement.get_color_at(x, y)
+        if picked_color:
+            set_color(picked_color)
     
 def control_mouse_event(event, x, y, flags, param):
     if event == cv2.EVENT_LBUTTONDOWN:
@@ -62,6 +72,8 @@ def control_mouse_event(event, x, y, flags, param):
 
 mainFrame.add_cursor_listener(control_mouse_event)
 mainFrame.add_layer(Canvas(800, 600))
+color_picker = ColorPicker(0, 400, 200, 200)
+mainFrame.add_UI_element(color_picker)
 
 while True:
     mainFrame.redraw()

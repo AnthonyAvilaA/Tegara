@@ -7,10 +7,9 @@ from model.Color import Color
 
 class Canvas(Clickeable):
     def __init__(self, width: int, height: int) -> None:
-        self._image = np.array([[255, 255, 255] * width] * height, dtype=np.uint8)
         self._image = np.full((height, width, 3), 255, dtype=np.uint8)
 
-    def get_image(self):
+    def get_image(self) -> np.ndarray:
         return self._image.copy()
     
     def set_image(self, image: np.ndarray) -> None:
@@ -24,6 +23,12 @@ class Canvas(Clickeable):
         if 0 <= x < img_width and 0 <= y < img_height:
             return True
         return False
+    
+    def get_x(self) -> int:
+        return 0
+    
+    def get_y(self) -> int:
+        return 0
     
     def get_width(self) -> int:
         return self._image.shape[1]
