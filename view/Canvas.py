@@ -24,3 +24,9 @@ class Canvas(Clickeable):
         if 0 <= x < img_width and 0 <= y < img_height:
             return True
         return False
+    
+    def get_width(self) -> int:
+        return self._image.shape[1]
+    
+    def get_height(self) -> int:
+        return self._image.shape[0]

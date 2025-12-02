@@ -12,8 +12,17 @@ class Color:
     
     def get_blue(self) -> int:
         return self._b
+
+    def get_tuple(self) -> tuple[int, int, int]:
+        return (self._r, self._g, self._b)
     
+    def get_list(self) -> list[int]:
+        return [self._r, self._g, self._b]
+
     def __eq__(self, other):
         if not isinstance(other, Color):
             return False
         return (self._r == other._r) and (self._g == other._g) and (self._b == other._b)
+    
+    def __hash__(self):
+        return hash((self._r, self._g, self._b))
