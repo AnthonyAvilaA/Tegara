@@ -1,4 +1,5 @@
 from control.MouseListener import MouseListener
+from definitions.key import Key
 from view.Canvas import Canvas
 from model.Color import Color
 from view.MainFrame import MainFrame
@@ -77,15 +78,15 @@ mainFrame.add_UI_element(color_picker)
 
 while True:
     mainFrame.redraw()
-    key = cv2.waitKey(20)
-    if key == 27:  # Exit on 'ESC' key
+    pressed_key = cv2.waitKey(20)
+    if pressed_key is Key.ESC:
         break
-    elif key == 26:  # ctrl + z for undo
+    elif pressed_key is Key.CTRL_Z:
         if command_history:
             last_command = command_history.pop()
             last_command.undo()
-    elif key != -1:
-        print(f"Key pressed: {key} {chr(key)}")
+    elif pressed_key is not Key.NONE:
+        print(f"Key pressed: {pressed_key} {chr(pressed_key)}")
     else:
         continue
 
