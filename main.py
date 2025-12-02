@@ -1,4 +1,8 @@
 from control.MouseListener import MouseListener
+from control.commands.ExitCommand import ExitCommand
+from control.commands.NoneCommand import NoneCommand
+from control.commands.UndoCommand import UndoCommand
+from control.handlers.KeyHandler import KeyHandler
 from definitions.key import Key
 from view.Canvas import Canvas
 from model.Color import Color
@@ -53,6 +57,7 @@ def handle_button_down(event: Event):
             set_color(picked_color)
     
 def control_mouse_event(event, x, y, flags, param):
+    # TODO: Put this in new class MouseHandler
     if event == cv2.EVENT_LBUTTONDOWN:
         handle_button_down(Event(Point(x, y), ActionType.LEFT_BUTTON_DOWN))
 
@@ -76,18 +81,13 @@ mainFrame.add_layer(Canvas(800, 600))
 color_picker = ColorPicker(0, 400, 200, 200)
 mainFrame.add_UI_element(color_picker)
 
+key_listener = KeyHandler()
+key_listener.add_command_for_key(ExitCommand(), Key.ESC)
+key_listener.add_command_for_key(UndoCommand(command_history), Key.CTRL_Z)
+key_listener.add_command_for_key(UndoCommand(command_history), Key.U)
+key_listener.add_command_for_key(NoneCommand(), Key.NONE)
+
 while True:
     mainFrame.redraw()
-    pressed_key = cv2.waitKey(20)
-    if pressed_key is Key.ESC:
-        break
-    elif pressed_key is Key.CTRL_Z:
-        if command_history:
-            last_command = command_history.pop()
-            last_command.undo()
-    elif pressed_key is not Key.NONE:
-        print(f"Key pressed: {pressed_key} {chr(pressed_key)}")
-    else:
-        continue
+    key_listener.get_command(cv2.waitKey(1)).execute()
 
-cv2.destroyAllWindows()

@@ -11,8 +11,8 @@ class MainFrame:
         self.__width = width
         self.__height = height
         self.__rotation = 0.0
-        self.__actual_layer = 0
-        cv2.namedWindow(self.__title, cv2.WINDOW_AUTOSIZE)
+        self._current_layer = 0
+        cv2.namedWindow(self.__title, cv2.WINDOW_AUTOSIZE | cv2.WINDOW_GUI_NORMAL | cv2.WINDOW_NORMAL)
         cv2.resizeWindow(self.__title, width, height)
         self.redraw()
     
@@ -74,16 +74,16 @@ class MainFrame:
 
     def set_actual_layer(self, index: int) -> None:
         if 0 <= index < len(self.__layers):
-            self.__actual_layer = index
+            self._current_layer = index
     
-    def get_actual_layer(self) -> int:
-        return self.__actual_layer
+    def get_current_layer(self) -> int:
+        return self._current_layer
 
     def get_element_clicked(self, x: int, y: int) -> Clickeable | None:
         for element in self.__UI:
             if element.check_click(x, y):
                 return element
         
-        if self.__layers[self.__actual_layer].check_click(x, y):
-            return self.__layers[self.__actual_layer]
+        if self.__layers[self._current_layer].check_click(x, y):
+            return self.__layers[self._current_layer]
         return None
