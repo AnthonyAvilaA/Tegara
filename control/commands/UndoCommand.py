@@ -5,7 +5,6 @@ class UndoCommand(Command):
         self.command_history = command_history
 
     def execute(self):
-        print("Undo")
         if self.command_history:
             last_command = self.command_history.pop()
             last_command.undo()

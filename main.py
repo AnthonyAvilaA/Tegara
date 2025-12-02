@@ -83,8 +83,7 @@ mainFrame.add_UI_element(color_picker)
 
 key_listener = KeyHandler()
 key_listener.add_command_for_key(ExitCommand(), Key.ESC)
-key_listener.add_command_for_key(UndoCommand(command_history), Key.CTRL_Z)
-key_listener.add_command_for_key(UndoCommand(command_history), Key.U)
+key_listener.add_command_for_key(UndoCommand(command_history), Key.CTRL_Z, Key.U)
 key_listener.add_command_for_key(NoneCommand(), Key.NONE)
 
 while True:
