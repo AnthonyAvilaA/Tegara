@@ -16,10 +16,21 @@ class CanvasDrawCommand(Command, MouseListener):
         self.changed_pixels: set[CanvasPixel] = set()
     
     def execute(self):
+        if self.changed_pixels.__len__() > 0:
+            self.redo()
         image = self.canvas.get_image()
         self.draw_point(self.position, image)
         self.canvas.set_image(image)
-        
+    
+    def redo(self):
+        image = self.canvas.get_image()
+        for pixel in self.changed_pixels:
+            x = pixel.position.get_x()
+            y = pixel.position.get_y()
+            image[y, x] = [self.color.get_red(), self.color.get_green(), self.color.get_blue()]
+        self.canvas.set_image(image)
+        return
+
     def undo(self):
         image = self.canvas.get_image()
         for pixel in self.changed_pixels:

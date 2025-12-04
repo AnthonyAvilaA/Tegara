@@ -26,3 +26,6 @@ class Color:
     
     def __hash__(self):
         return hash((self._r, self._g, self._b))
+
+    def __repr__(self):
+        return f"Color(r={self._r}, g={self._g}, b={self._b})"

@@ -2,6 +2,7 @@ from control.MouseListener import MouseListener
 from control.commands.ExitCommand import ExitCommand
 from control.commands.NoneCommand import NoneCommand
 from control.commands.UndoCommand import UndoCommand
+from control.commands.RedoCommand import RedoCommand
 from control.handlers.KeyHandler import KeyHandler
 from definitions.key import Key
 from view.Canvas import Canvas
@@ -18,7 +19,8 @@ import cv2
 
 mainFrame = MainFrame()
 mouse_publisher = MousePublisher()
-command_history = []
+undo_history = []
+redo_history = []
 color = Color(50, 50, 255)  # Default color set to black
 draw_size = 10  # Default draw size
 
@@ -38,7 +40,7 @@ def change_draw_size(flags: int):
 def start_command(command: Command):
     if command:
         command.execute()
-        command_history.append(command)
+        undo_history.append(command)
         if isinstance(command, MouseListener):
             mouse_publisher.set_subscriber(command)
             
@@ -83,10 +85,12 @@ mainFrame.add_UI_element(color_picker)
 
 key_listener = KeyHandler()
 key_listener.add_command_for_key(ExitCommand(), Key.ESC)
-key_listener.add_command_for_key(UndoCommand(command_history), Key.CTRL_Z, Key.U)
+key_listener.add_command_for_key(UndoCommand(undo_history, redo_history), Key.CTRL_Z, Key.U)
+key_listener.add_command_for_key(RedoCommand(redo_history, undo_history), Key.CTRL_Y, Key.R)
 key_listener.add_command_for_key(NoneCommand(), Key.NONE)
 
 while True:
     mainFrame.redraw()
-    key_listener.get_command(cv2.waitKey(1)).execute()
+    key  = cv2.waitKey(1)
+    key_listener.get_command(key).execute()
 
