@@ -45,6 +45,7 @@ def start_command(command: Command):
             mouse_publisher.set_subscriber(command)
             
 def handle_button_down(event: Event):
+    redo_history.clear()
     x = event.position.get_x()
     y = event.position.get_y()
     UIElement = mainFrame.get_element_clicked(x, y)
@@ -74,6 +75,7 @@ def control_mouse_event(event, x, y, flags, param):
     
     if event == cv2.EVENT_LBUTTONUP or event == cv2.EVENT_RBUTTONUP:
         mouse_publisher.clear_subscriber()
+        redo_history.clear()
     
     if event == cv2.EVENT_MOUSEWHEEL:
         change_draw_size(flags)
