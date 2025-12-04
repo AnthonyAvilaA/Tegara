@@ -78,7 +78,7 @@ def control_mouse_event(event, x, y, flags, param):
 
 mainFrame.add_cursor_listener(control_mouse_event)
 mainFrame.add_layer(Canvas(800, 600))
-color_picker = ColorPicker(0, 400, 200, 200)
+color_picker = ColorPicker(0, 500, 200, 100)
 mainFrame.add_UI_element(color_picker)
 
 key_listener = KeyHandler()
