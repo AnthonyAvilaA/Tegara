@@ -1,3 +1,5 @@
+from model.Color import Color
+from model.Point import Point
 from view.Canvas import Canvas
 from model.Clickeable import Clickeable
 import numpy as np
@@ -12,6 +14,8 @@ class MainFrame:
         self.__height = height
         self.__rotation = 0.0
         self._current_layer = 0
+        self.cursor: Point = None
+        self.cursor_type = 0  # 0: drawing, 1: pointer
         cv2.namedWindow(self.__title, cv2.WINDOW_AUTOSIZE | cv2.WINDOW_GUI_NORMAL | cv2.WINDOW_NORMAL)
         cv2.resizeWindow(self.__title, width, height)
         self.redraw()
@@ -23,6 +27,10 @@ class MainFrame:
         
         for element in self.__UI:
             self.draw_element(image, element)
+        
+        if self.cursor is not None:
+            self.draw_cursor(image)
+            
         cv2.imshow(self.__title, image)
 
     def draw_element(self, image: np.ndarray, element: Clickeable):
@@ -51,10 +59,10 @@ class MainFrame:
     def get_number_of_UI_elements(self) -> int:
         return len(self.__UI)
     
-    def get_UI_elements(self) -> list:
+    def get_UI_elements(self) -> list[Clickeable]:
         return self.__UI.copy()
     
-    def get_layers(self) -> list:
+    def get_layers(self) -> list[Canvas]:
         return self.__layers.copy()
     
     def remove_layer(self, index: int) -> None:
@@ -76,8 +84,23 @@ class MainFrame:
         if 0 <= index < len(self.__layers):
             self._current_layer = index
     
-    def get_current_layer(self) -> int:
+    def get_current_layer_index(self) -> int:
         return self._current_layer
+    
+    def setCursorPosition(self, x: int, y: int) -> None:
+        self.cursor = Point(x, y)
+    
+    def setCursorType(self, cursor_type: int) -> None:
+        self.cursor_type = cursor_type
+
+    def draw_cursor(self, image: np.ndarray) -> None:
+        color = Color(0, 0, 0)
+        if self.cursor_type == 1:
+            cv2.circle(image, (self.cursor.get_x(), self.cursor.get_y()), 10, color.get_tuple(), cv2.FILLED)
+        else:
+            # Diubujar una cruz para el cursor de dibujo
+            cv2.line(image, (self.cursor.get_x() - 10, self.cursor.get_y()), (self.cursor.get_x() + 10, self.cursor.get_y()), color.get_tuple(), 2)
+            cv2.line(image, (self.cursor.get_x(), self.cursor.get_y() - 10), (self.cursor.get_x(), self.cursor.get_y() + 10), color.get_tuple(), 2)
 
     def get_element_clicked(self, x: int, y: int) -> Clickeable | None:
         for element in self.__UI:

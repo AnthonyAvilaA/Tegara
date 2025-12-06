@@ -16,6 +16,15 @@ from control.Command import Command
 from model.Point import Point
 from view.ColorPicker import ColorPicker
 import cv2
+from model.SmallClassifier import SmallClassifier
+import torch
+from model.HandDetectorWrapper import HandDetectorWrapper 
+import numpy as np
+
+vid = cv2.VideoCapture(0)
+model = SmallClassifier()         # misma arquitectura
+model.load_state_dict(torch.load("modelo_pointing.pth"))
+model.eval()                      # modo inferencia
 
 mainFrame = MainFrame()
 mouse_publisher = MousePublisher()
@@ -91,7 +100,58 @@ key_listener.add_command_for_key(UndoCommand(undo_history, redo_history), Key.CT
 key_listener.add_command_for_key(RedoCommand(redo_history, undo_history), Key.CTRL_Y, Key.R)
 key_listener.add_command_for_key(NoneCommand(), Key.NONE)
 
+hand_detector = HandDetectorWrapper()
+first_click = True
+
+def normalize_finger_position(point: Point, img_width=800, img_height=600, canvas_width=800, canvas_height=600) -> Point:
+    if point is None:
+        return None
+    x = point.get_x() / img_width
+    y = point.get_y() / img_height
+    x = int(x * canvas_width)
+    y = int(y * canvas_height)
+    return Point(x, y)
+
 while True:
+    frame = vid.read()[1]
+    frame = cv2.flip(frame, 1)  # Espejo para selfie view
+    
+    hand_detector.setImage(frame)
+    hands = hand_detector.findHands(draw=True)
+
+    if hands:
+        hand = hands[0]
+        lmList = hand['lmList']
+        x = list()
+        for i in model.normalize_sample(lmList):
+            if i is not None:
+                x.append(i)
+        x = np.array(x).flatten().astype(np.float32)
+        x = torch.tensor(x, dtype=torch.float32).unsqueeze(0)  # batch=1
+        with torch.no_grad():
+            pred = model(x)
+
+        index_finger_point = normalize_finger_position(hand_detector.get_index_finger(hands, 0))
+        if index_finger_point is not None:
+            if pred.item() > 0.5:
+                if first_click:
+                    handle_button_down(Event(index_finger_point, ActionType.LEFT_BUTTON_DOWN))
+                    first_click = False
+                mouse_publisher.notify_click(Event(index_finger_point, ActionType.LEFT_DRAG))
+                cv2.putText(frame, "Dibujando", (10, 70), cv2.FONT_HERSHEY_PLAIN, 3, (0, 255, 0), 3)
+                mainFrame.setCursorType(0)
+            else:
+                first_click = True
+                mouse_publisher.clear_subscriber()
+                redo_history.clear()
+                cv2.putText(frame, "No dibujando", (10, 70), cv2.FONT_HERSHEY_PLAIN, 3, (0, 0, 255), 3)
+                mainFrame.setCursorType(1)
+            
+            # dibujar posición del dedo índice
+            mainFrame.setCursorPosition(index_finger_point.get_x(), index_finger_point.get_y())
+            cv2.imshow("Hand Tracking", frame)
+           
+        
     mainFrame.redraw()
     key  = cv2.waitKey(1)
     key_listener.get_command(key).execute()
