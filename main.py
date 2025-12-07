@@ -100,17 +100,29 @@ key_listener.add_command_for_key(UndoCommand(undo_history, redo_history), Key.CT
 key_listener.add_command_for_key(RedoCommand(redo_history, undo_history), Key.CTRL_Y, Key.R)
 key_listener.add_command_for_key(NoneCommand(), Key.NONE)
 
-hand_detector = HandDetectorWrapper()
+hand_detector = HandDetectorWrapper(maxHands=1, detectionCon=0.4, minTrackCon=0.4)
 first_click = True
 
+
+prev_x = 400
+prev_y = 300
 def normalize_finger_position(point: Point, img_width=800, img_height=600, canvas_width=800, canvas_height=600) -> Point:
+    global prev_x, prev_y
     if point is None:
         return None
+    
     x = point.get_x() / img_width
     y = point.get_y() / img_height
     x = int(x * canvas_width)
     y = int(y * canvas_height)
-    return Point(x, y)
+
+    x = abs(prev_x + x) / 2 * 1.1
+    y = abs(prev_y + y) / 2 * 1.1
+
+    prev_x  = x
+    prev_y = y
+
+    return Point(int(x), int(y))
 
 while True:
     frame = vid.read()[1]

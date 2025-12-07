@@ -95,6 +95,8 @@ class MainFrame:
 
     def draw_cursor(self, image: np.ndarray) -> None:
         color = Color(0, 0, 0)
+        if self.cursor.get_x() < 0 or self.cursor.get_x() >= self.__width or self.cursor.get_y() < 0 or self.cursor.get_y() >= self.__height:
+            return
         if self.cursor_type == 1:
             cv2.circle(image, (self.cursor.get_x(), self.cursor.get_y()), 10, color.get_tuple(), cv2.FILLED)
         else:
