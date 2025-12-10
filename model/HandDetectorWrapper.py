@@ -19,3 +19,11 @@ class HandDetectorWrapper:
             lmList = hands[handNo]['lmList']
             return Point(lmList[8][0], lmList[8][1])  # Índice del dedo índice
         return None
+
+    def get_hand_points(self, hands: list[dict], handNo=0) -> dict[str, Point]:
+        points = dict()
+        if hands and len(hands) > handNo:
+            lmList = hands[handNo]['lmList']
+            for i, lm in enumerate(lmList):
+                points[i] = Point(lm[0], lm[1])
+        return points

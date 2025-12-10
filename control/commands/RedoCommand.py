@@ -9,7 +9,6 @@ class RedoCommand(Command):
         if self.redo_history:
             last_command = self.redo_history.pop()
             self.undo_history.append(last_command)
-            print(last_command)
             last_command.execute()
 
     def undo(self):

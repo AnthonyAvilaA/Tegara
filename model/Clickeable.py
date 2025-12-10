@@ -1,14 +1,9 @@
 from abc import ABC, abstractmethod
-from control.Command import Command
-from model.ActionType import ActionType
+from model.Point import Point
 
 class Clickeable(ABC):
     @abstractmethod
-    def get_x() -> int:
-        pass
-
-    @abstractmethod
-    def get_y() -> int:
+    def get_origin_point() -> Point:
         pass
     
     @abstractmethod
@@ -24,5 +19,5 @@ class Clickeable(ABC):
         pass
     
     @abstractmethod
-    def check_click(self, x: int, y: int) -> bool:
+    def check_click(self, point: Point) -> bool:
         pass

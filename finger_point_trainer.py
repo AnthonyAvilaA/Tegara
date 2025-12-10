@@ -9,7 +9,7 @@ from model.SmallClassifier import SmallClassifier
 vid = cv2.VideoCapture(0)
 
 # Initializa detector
-detector = HandDetector(staticMode=False, maxHands=2, modelComplexity=1, detectionCon=0.5, minTrackCon=0.5)
+detector = HandDetector(staticMode=False, maxHands=2, modelComplexity=1, detectionCon=0.2, minTrackCon=0.1)
 startRecording = False
 
 pointingRecord = list() # Distancia desde el centro de la palma a los
@@ -18,6 +18,17 @@ notPointingRecord = list()
 modelTrained = False
 
 model = SmallClassifier()
+
+model = SmallClassifier()
+
+# Intentar cargar modelo previo para continuar entrenamiento
+try:
+    model.load_state_dict(torch.load("modelo_pointing.pth", map_location="cpu"))
+    modelTrained = True
+    print("Modelo cargado. Continuando entrenamiento...")
+except FileNotFoundError:
+    print("No existe modelo anterior. Se entrenará desde cero.")
+
 
 while(True):      
     # Fotograma a fotograma
@@ -102,5 +113,5 @@ vid.release()
 # Destruye ventanas
 cv2.destroyAllWindows()
 
-torch.save(model.state_dict(), "modelo_pointing.pth")
+torch.save(model.state_dict(), "modelo_pointing_new.pth")
 

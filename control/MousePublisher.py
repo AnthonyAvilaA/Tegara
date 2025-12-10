@@ -14,3 +14,6 @@ class MousePublisher:
     
     def clear_subscriber(self) -> None:
         self.subscriber = None
+
+    def has_subscriber(self) -> bool:
+        return self.subscriber is not None

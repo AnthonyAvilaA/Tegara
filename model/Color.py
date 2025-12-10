@@ -1,8 +1,9 @@
 class Color:
-    def __init__(self, r: int, g: int, b: int):
-        self._r = r
-        self._g = g
-        self._b = b
+    def __init__(self, r: int, g: int, b: int, a: int = 255):
+        self._r = int(r)
+        self._g = int(g)
+        self._b = int(b)
+        self._a = int(a)
     
     def get_red(self) -> int:
         return self._r
@@ -12,20 +13,23 @@ class Color:
     
     def get_blue(self) -> int:
         return self._b
+    
+    def get_alpha(self) -> int:
+        return self._a
 
-    def get_tuple(self) -> tuple[int, int, int]:
-        return (self._r, self._g, self._b)
+    def get_tuple(self) -> tuple[int, int, int, int]:
+        return (self._r, self._g, self._b, self._a)
     
     def get_list(self) -> list[int]:
-        return [self._r, self._g, self._b]
+        return [self._r, self._g, self._b, self._a]
 
     def __eq__(self, other):
         if not isinstance(other, Color):
             return False
-        return (self._r == other._r) and (self._g == other._g) and (self._b == other._b)
+        return (self._r == other._r) and (self._g == other._g) and (self._b == other._b) and (self._a == other._a)
     
     def __hash__(self):
-        return hash((self._r, self._g, self._b))
+        return hash((self._r, self._g, self._b, self._a))
 
     def __repr__(self):
-        return f"Color(r={self._r}, g={self._g}, b={self._b})"
+        return f"Color(r={self._r}, g={self._g}, b={self._b}, a={self._a})"
