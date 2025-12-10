@@ -12,25 +12,39 @@ class ToggleableUI(Generic[T], Clickeable):
         self._width = width
         self._height = height
         self._image = image
-        self.toggled_on = toggled_on
+        self._toggled_on = toggled_on
+        self._is_dirty = True
 
     def toggle(self) -> None:
-        self.toggled_on = not self.toggled_on
+        self._toggled_on = not self._toggled_on
     
     def set_toggle(self, state: bool) -> None:
-        self.toggled_on = state
+        self._toggled_on = state
 
     def get_image(self) -> np.ndarray:
-        if self.toggled_on:
+        if self._toggled_on:
             return self.element.get_image()
         else:
             return self._image
     
     def set_image(self, image: np.ndarray) -> None:
         self._image = image
+        self.is_dirty = True
+    
+    def is_dirty(self) -> bool:
+        if self._toggled_on:
+            return self.element.is_dirty()
+        else:
+            return self._is_dirty
+    
+    def clear_dirty(self) -> None:
+        if self._toggled_on:
+            self.element.clear_dirty()
+        else:
+            self._is_dirty = False
 
     def check_click(self, point: Point) -> bool:
-        if self.toggled_on:
+        if self._toggled_on:
             return self.element.check_click(point)
         else:
             clicked = (self._point.get_x() <= point.get_x() < self._point.get_x() + self._width and
@@ -38,19 +52,19 @@ class ToggleableUI(Generic[T], Clickeable):
             return clicked
 
     def get_origin_point(self) -> Point:
-        if self.toggled_on:
+        if self._toggled_on:
             return self.element.get_origin_point()
         else:
             return self._point
 
     def get_width(self) -> int:
-        if self.toggled_on:
+        if self._toggled_on:
             return self.element.get_width()
         else:
             return self._width
 
     def get_height(self) -> int:
-        if self.toggled_on:
+        if self._toggled_on:
             return self.element.get_height()
         else:
             return self._height
@@ -59,4 +73,4 @@ class ToggleableUI(Generic[T], Clickeable):
         return self.element
     
     def is_toggled_on(self) -> bool:
-        return self.toggled_on
+        return self._toggled_on

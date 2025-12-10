@@ -85,8 +85,6 @@ class CanvasDrawCommand(Command, MouseListener):
         STEPS = int(dist * 0.6)
         STEPS = max(4, min(MAX_STEPS, STEPS))  # clamp
 
-        print("STEPS:", STEPS)
-
         # Catmull-Rom
         for i in range(STEPS + 1):
             t = i / STEPS

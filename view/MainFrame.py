@@ -17,11 +17,15 @@ class MainFrame:
         self.cursor: Point = None
         self.hand_data: list[Point] = []
         self.cursor_type = 0  # 0: drawing, 1: pointer
+        self.needs_redraw = True
         cv2.namedWindow(self.__title, cv2.WINDOW_AUTOSIZE | cv2.WINDOW_GUI_NORMAL | cv2.WINDOW_NORMAL)
         cv2.resizeWindow(self.__title, width, height)
         self.redraw()
     
     def redraw(self) -> None:
+        self.check_redraw()
+        if not self.needs_redraw:
+            return
         image = np.full((self.__height, self.__width, 4), 255, dtype=np.uint8)
         for layer in self.__layers:
             self.draw_element(image, layer)
@@ -37,6 +41,15 @@ class MainFrame:
             
         cv2.imshow(self.__title, image)
 
+    def check_redraw(self) -> bool:
+        for element in self.__UI:
+            print("Checking UI element dirty:", element)
+            if element.is_dirty():
+                self.needs_redraw = True
+                return True
+        self.needs_redraw = False
+        return False
+    
     def draw_element(self, image: np.ndarray, element: Clickeable):
         point = element.get_origin_point()
         h = element.get_height()
@@ -57,31 +70,31 @@ class MainFrame:
 
         # Copiar resultado
         image[point.get_y():point.get_y()+h, point.get_x():point.get_x()+w] = element_img
-
+    
     def alpha_blend(self, bg, fg):
-        """
-        Mezcla dos imágenes RGBA usando una versión optimizada vectorizada.
-        Ambas imágenes deben tener el mismo tamaño.
-        """
+        # 1. Extract alpha channel and expand dimensions for broadcasting
+        # Shape becomes (H, W, 1) so it can multiply against (H, W, 3)
+        alpha = fg[..., 3].astype(np.uint16)[..., None]
+        inv_alpha = 255 - alpha
 
-        # Extraer alpha como float32 (para cálculos rápidos)
-        alpha = fg[..., 3:4].astype(np.float32) / 255.0
+        # 2. Extract RGB channels and convert to uint16 to prevent overflow
+        fg_rgb = fg[..., :3].astype(np.uint16)
+        bg_rgb = bg[..., :3].astype(np.uint16)
 
-        # Mezclar RGB en una sola operación vectorizada
-        out_rgb = fg[..., :3].astype(np.float32) * alpha + \
-                bg[..., :3].astype(np.float32) * (1.0 - alpha)
+        # 3. Perform blending using integer math
+        # Formula: (FG * Alpha + BG * (255 - Alpha)) / 255
+        out_rgb = (fg_rgb * alpha + bg_rgb * inv_alpha) // 255
 
-        # Calcular alpha resultante (también vectorizado)
-        out_alpha = fg[..., 3:4].astype(np.float32) + \
-                    bg[..., 3:4].astype(np.float32) * (1.0 - alpha)
+        # 4. Calculate resulting alpha (usually just keeping the highest alpha or saturated add)
+        # Simple approach: max alpha or saturated addition. 
+        # Here we just keep 255 (opaque) since the canvas is usually opaque.
+        # However, to be mathematically correct like your previous function:
+        fg_a = fg[..., 3].astype(np.uint16)
+        bg_a = bg[..., 3].astype(np.uint16)
+        out_alpha = (fg_a + bg_a * (255 - fg_a) // 255)[..., None]
 
-        # Unir canales y convertir a uint8
-        out = np.concatenate(
-            (out_rgb, out_alpha),
-            axis=2
-        ).astype(np.uint8)
-
-        return out
+        # 5. Concatenate and cast back to uint8
+        return np.concatenate((out_rgb, out_alpha), axis=2).astype(np.uint8)
 
     def add_cursor_listener(self, listener) -> None:
         cv2.setMouseCallback(self.__title, listener)

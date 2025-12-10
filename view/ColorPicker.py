@@ -9,6 +9,7 @@ class ColorPicker(Clickeable):
         self._origin = origin
         self._width = width
         self._height = height
+        self._is_dirty = True
         self._image = np.full((height, width, 4), 0, dtype=np.uint8)
         self._image = self._generate_full_hsv()
 
@@ -23,6 +24,12 @@ class ColorPicker(Clickeable):
 
     def get_image(self) -> np.ndarray:
         return self._image
+    
+    def is_dirty(self) -> bool:
+        return self._is_dirty
+    
+    def clear_dirty(self) -> None:
+        self._is_dirty = False
     
     def check_click(self, point: Point) -> bool:
         clicked = (self._origin.get_x() <= point.get_x() < self._origin.get_x() + self._width and
