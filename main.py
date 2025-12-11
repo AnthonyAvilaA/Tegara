@@ -24,7 +24,7 @@ import torch
 from model.HandDetectorWrapper import HandDetectorWrapper 
 import numpy as np
 
-vid = cv2.VideoCapture(0)
+vid = cv2.VideoCapture(1)
 
 model = SmallClassifier()
 model.load_state_dict(torch.load("modelo_pointing1.pth"))

@@ -81,8 +81,8 @@ class CanvasDrawCommand(Command, MouseListener):
         dist = math.hypot(x2 - x1, y2 - y1)
 
         # Calcular STEPS dinámicos
-        MAX_STEPS = 70
-        STEPS = int(dist * 0.6)
+        MAX_STEPS = 80
+        STEPS = int(dist * 0.7)
         STEPS = max(4, min(MAX_STEPS, STEPS))  # clamp
 
         # Catmull-Rom

@@ -13,41 +13,40 @@ class MainFrame:
         self.__width = width
         self.__height = height
         self.__rotation = 0.0
-        self._current_layer = 0
-        self.cursor: Point = None
-        self.hand_data: list[Point] = []
-        self.cursor_type = 0  # 0: drawing, 1: pointer
-        self.needs_redraw = True
+        self.__current_layer = 0
+        self.__image = np.full((height, width, 4), 255, dtype=np.uint8)
+        self.__cursor: Point = None
+        self.__hand_data: list[Point] = []
+        self.__cursor_type = 0  # 0: drawing, 1: pointer
         cv2.namedWindow(self.__title, cv2.WINDOW_AUTOSIZE | cv2.WINDOW_GUI_NORMAL | cv2.WINDOW_NORMAL)
         cv2.resizeWindow(self.__title, width, height)
-        self.redraw()
     
     def redraw(self) -> None:
-        self.check_redraw()
-        if not self.needs_redraw:
-            return
-        image = np.full((self.__height, self.__width, 4), 255, dtype=np.uint8)
-        for layer in self.__layers:
-            self.draw_element(image, layer)
-        
-        for element in self.__UI:
-            self.draw_element(image, element)
-        
-        if self.cursor is not None:
-            self.draw_cursor(image)
-        
-        for point in self.hand_data:
-            cv2.circle(image, (point.get_x(), point.get_y()), 5, Color(255, 0, 0).get_tuple(), cv2.FILLED)
+        if self.needs_redraw():
+            self.__image = np.full((self.__height, self.__width, 4), 255, dtype=np.uint8)
+            for layer in self.__layers:
+                self.draw_element(self.__image, layer)
             
-        cv2.imshow(self.__title, image)
+            for element in self.__UI:
+                self.draw_element(self.__image, element)
+            
+        image_copy = self.__image.copy()     
+        for point in self.__hand_data:
+            cv2.circle(image_copy, (point.get_x(), point.get_y()), 5, Color(255, 0, 0).get_tuple(), cv2.FILLED)
+        if self.__cursor is not None:
+            self.draw_cursor(image_copy)
+            
+        cv2.imshow(self.__title, image_copy)
 
-    def check_redraw(self) -> bool:
+    def needs_redraw(self) -> bool:
         for element in self.__UI:
-            print("Checking UI element dirty:", element)
             if element.is_dirty():
-                self.needs_redraw = True
+                element.clear_dirty()
                 return True
-        self.needs_redraw = False
+        for element in self.__layers:
+            if element.is_dirty():
+                element.clear_dirty()
+                return True            
         return False
     
     def draw_element(self, image: np.ndarray, element: Clickeable):
@@ -134,36 +133,36 @@ class MainFrame:
 
     def set_actual_layer(self, index: int) -> None:
         if 0 <= index < len(self.__layers):
-            self._current_layer = index
+            self.__current_layer = index
     
     def get_current_layer_index(self) -> int:
-        return self._current_layer
+        return self.__current_layer
     
     def set_cursor_position(self, point: Point) -> None:
-        self.cursor = point
+        self.__cursor = point
     
     def set_cursor_type(self, cursor_type: int) -> None:
-        self.cursor_type = cursor_type
+        self.__cursor_type = cursor_type
     
     def set_hand(self, hand_data: list[Point]) -> None:
-        self.hand_data = hand_data
+        self.__hand_data = hand_data
 
     def draw_cursor(self, image: np.ndarray) -> None:
         color = Color(0, 0, 0)
-        if self.cursor.get_x() < 0 or self.cursor.get_x() >= self.__width or self.cursor.get_y() < 0 or self.cursor.get_y() >= self.__height:
+        if self.__cursor.get_x() < 0 or self.__cursor.get_x() >= self.__width or self.__cursor.get_y() < 0 or self.__cursor.get_y() >= self.__height:
             return
-        if self.cursor_type == 1:
-            cv2.circle(image, (self.cursor.get_x(), self.cursor.get_y()), 10, color.get_tuple(), cv2.FILLED)
+        if self.__cursor_type == 1:
+            cv2.circle(image, (self.__cursor.get_x(), self.__cursor.get_y()), 10, color.get_tuple(), cv2.FILLED)
         else:
             # Diubujar una cruz para el cursor de dibujo
-            cv2.line(image, (self.cursor.get_x() - 10, self.cursor.get_y()), (self.cursor.get_x() + 10, self.cursor.get_y()), color.get_tuple(), 2)
-            cv2.line(image, (self.cursor.get_x(), self.cursor.get_y() - 10), (self.cursor.get_x(), self.cursor.get_y() + 10), color.get_tuple(), 2)
+            cv2.line(image, (self.__cursor.get_x() - 10, self.__cursor.get_y()), (self.__cursor.get_x() + 10, self.__cursor.get_y()), color.get_tuple(), 2)
+            cv2.line(image, (self.__cursor.get_x(), self.__cursor.get_y() - 10), (self.__cursor.get_x(), self.__cursor.get_y() + 10), color.get_tuple(), 2)
 
     def get_element_clicked(self, point: Point) -> Clickeable | None:
         for element in self.__UI:
             if element.check_click(point):
                 return element
         
-        if self.__layers[self._current_layer].check_click(point):
-            return self.__layers[self._current_layer]
+        if self.__layers[self.__current_layer].check_click(point):
+            return self.__layers[self.__current_layer]
         return None
