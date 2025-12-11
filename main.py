@@ -31,7 +31,7 @@ monitors = get_monitors()
 
 mainFrame = MainFrame(monitors[0].width, monitors[0].height)
 model = SmallClassifier()
-model.load_state_dict(torch.load("modelo_pointing2.pth"))
+model.load_state_dict(torch.load("modelo_pointing1.pth"))
 model.eval()
 
 hand_detector = HandDetectorWrapper(maxHands=1, detectionCon=0.2, minTrackCon=0.1)

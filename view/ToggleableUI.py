@@ -8,55 +8,68 @@ T = TypeVar("T", bound=Clickeable)
 class ToggleableUI(Generic[T], Clickeable):
     def __init__(self, point: Point, width: int, height: int, image: np.ndarray, element: T, toggled_on: bool = False) -> None:
         self.element: T = element
-        self._point = point
-        self._width = width
-        self._height = height
-        self._image = image
-        self.toggled_on = toggled_on
+        self.__point = point
+        self.__width = width
+        self.__height = height
+        self.__image = image
+        self.__toggled_on = toggled_on
+        self.__is_dirty = True
 
     def toggle(self) -> None:
-        self.toggled_on = not self.toggled_on
+        self.__toggled_on = not self.__toggled_on
+        self.__is_dirty = True
     
     def set_toggle(self, state: bool) -> None:
-        self.toggled_on = state
+        self.__toggled_on = state
+        self.__is_dirty = True
 
     def get_image(self) -> np.ndarray:
-        if self.toggled_on:
+        if self.__toggled_on:
             return self.element.get_image()
         else:
-            return self._image
+            return self.__image
     
     def set_image(self, image: np.ndarray) -> None:
-        self._image = image
+        self.__image = image
+        self.__is_dirty = True
+    
+    def is_dirty(self) -> bool:
+        return self.__is_dirty
+    
+    def clear_dirty(self) -> None:
+        if self.__toggled_on:
+            self.element.clear_dirty()
+        else:
+            self.__is_dirty = False
 
     def check_click(self, point: Point) -> bool:
-        if self.toggled_on:
+        if self.__toggled_on:
             return self.element.check_click(point)
         else:
-            clicked = (self._point.get_x() <= point.get_x() < self._point.get_x() + self._width and
-                self._point.get_y() <= point.get_y() < self._point.get_y() + self._height)
+            clicked = (self.__point.get_x() <= point.get_x() < self.__point.get_x() + self.__width and
+                self.__point.get_y() <= point.get_y() < self.__point.get_y() + self.__height)
             return clicked
 
     def get_origin_point(self) -> Point:
-        if self.toggled_on:
+        if self.__toggled_on:
             return self.element.get_origin_point()
         else:
-            return self._point
+            return self.__point
 
     def get_width(self) -> int:
-        if self.toggled_on:
+        if self.__toggled_on:
             return self.element.get_width()
         else:
-            return self._width
+            return self.__width
 
     def get_height(self) -> int:
-        if self.toggled_on:
+        if self.__toggled_on:
             return self.element.get_height()
         else:
-            return self._height
+            return self.__height
     
     def get_element(self) -> T:
         return self.element
     
     def is_toggled_on(self) -> bool:
-        return self.toggled_on
+        return self.__toggled_on

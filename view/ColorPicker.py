@@ -6,33 +6,40 @@ import cv2
 
 class ColorPicker(Clickeable):
     def __init__(self, origin: Point, width: int, height: int):
-        self._origin = origin
-        self._width = width
-        self._height = height
-        self._image = np.full((height, width, 4), 0, dtype=np.uint8)
-        self._image = self._generate_full_hsv()
+        self.__origin = origin
+        self.__width = width
+        self.__height = height
+        self.__is_dirty = True
+        self.__image = np.full((height, width, 4), 0, dtype=np.uint8)
+        self.__image = self._generate_full_hsv()
 
     def get_origin_point(self) -> Point:
-        return self._origin
+        return self.__origin
     
     def get_width(self) -> int:
-        return self._width
+        return self.__width
     
     def get_height(self) -> int:
-        return self._height
+        return self.__height
 
     def get_image(self) -> np.ndarray:
-        return self._image
+        return self.__image
+    
+    def is_dirty(self) -> bool:
+        return self.__is_dirty
+    
+    def clear_dirty(self) -> None:
+        self.__is_dirty = False
     
     def check_click(self, point: Point) -> bool:
-        clicked = (self._origin.get_x() <= point.get_x() < self._origin.get_x() + self._width and
-                self._origin.get_y() <= point.get_y() < self._origin.get_y() + self._height)
+        clicked = (self.__origin.get_x() <= point.get_x() < self.__origin.get_x() + self.__width and
+                self.__origin.get_y() <= point.get_y() < self.__origin.get_y() + self.__height)
         return clicked
     
     def get_color_at(self, point: Point) -> Color:
         if self.check_click(point):
-            local = point.substract(self._origin)
-            r, g, b, a = self._image[local.get_y(), local.get_x()]
+            local = point.substract(self.__origin)
+            r, g, b, a = self.__image[local.get_y(), local.get_x()]
             return Color(r, g, b, a)
         else:
             return None
@@ -44,34 +51,34 @@ class ColorPicker(Clickeable):
         - Saturation: vertical (0–255)
         - Value: fijo a 255
         """
-        hsv = np.zeros((self._height, self._width, 3), dtype=np.uint8)
+        hsv = np.zeros((self.__height, self.__width, 3), dtype=np.uint8)
 
-        for y in range(self._height // 2):
-            for x in range(self._width):
+        for y in range(self.__height // 2):
+            for x in range(self.__width):
 
                 # Hue → a lo largo del eje X (todo el espectro)
-                h = int((x / (self._width - 1)) * 179)
+                h = int((x / (self.__width - 1)) * 179)
 
                 # Saturation → de gris/blanco (arriba) a color puro (abajo)
-                s = int((y / (self._height // 2 - 1)) * 255)
+                s = int((y / (self.__height // 2 - 1)) * 255)
 
                 # Value → fijo a máximo brillo
                 v = 255
 
                 hsv[y, x] = [h, s, v]
-        for y in range(self._height // 2, self._height):
-            for x in range(self._width):
+        for y in range(self.__height // 2, self.__height):
+            for x in range(self.__width):
 
                 # Hue → a lo largo del eje X (todo el espectro)
-                h = int((x / (self._width - 1)) * 179)
+                h = int((x / (self.__width - 1)) * 179)
 
                 # Saturation → de color puro (arriba) a gris (abajo)
-                s = int(((self._height - 1 - y) / (self._height // 2 - 1)) * 255)
+                s = int(((self.__height - 1 - y) / (self.__height // 2 - 1)) * 255)
 
                 # Value → fijo a máximo brillo
-                v = (255 - int(((y - self._height // 2) / (self._height // 2 - 1)) * 255))
+                v = (255 - int(((y - self.__height // 2) / (self.__height // 2 - 1)) * 255))
 
                 hsv[y, x] = [h, s, v]
         rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
-        rgba = np.dstack([rgb, np.full((self._height, self._width), 255, dtype=np.uint8)])
+        rgba = np.dstack([rgb, np.full((self.__height, self.__width), 255, dtype=np.uint8)])
         return rgba

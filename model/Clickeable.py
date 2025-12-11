@@ -13,6 +13,14 @@ class Clickeable(ABC):
     @abstractmethod
     def get_height() -> int:
         pass
+    
+    @abstractmethod
+    def is_dirty() -> bool:
+        pass
+    
+    @abstractmethod
+    def clear_dirty() -> None:
+        pass
 
     @abstractmethod
     def get_image(self):
