@@ -1,4 +1,6 @@
 from view.Canvas import Canvas
+from model.Point import Point
+from model.Color import Color
 from model.Clickeable import Clickeable
 import numpy as np
 import cv2
