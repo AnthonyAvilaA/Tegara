@@ -13,7 +13,7 @@ class Color:
     
     def get_blue(self) -> int:
         return self._b
-    
+
     def get_alpha(self) -> int:
         return self._a
 
@@ -33,3 +33,7 @@ class Color:
 
     def __repr__(self):
         return f"Color(r={self._r}, g={self._g}, b={self._b}, a={self._a})"
+
+
+
+DEFAULT_COLOR = Color(13, 13, 13)

@@ -8,7 +8,7 @@ from view.ToggleableUI import ToggleableUI
 from control.handlers.KeyHandler import KeyHandler
 from definitions.key import Key
 from view.Canvas import Canvas
-from model.Color import Color
+from model.Color import Color, DEFAULT_COLOR
 from view.MainFrame import MainFrame
 from control.MousePublisher import MousePublisher
 from model.Event import Event
@@ -18,25 +18,28 @@ from control.handlers.ToggleableUIHandler import ToggleableUIHandler
 from control.Command import Command
 from model.Point import Point
 from view.ColorPicker import ColorPicker
+from screeninfo import get_monitors
 import cv2
 from model.SmallClassifier import SmallClassifier
 import torch
-from model.HandDetectorWrapper import HandDetectorWrapper 
+from model.HandDetectorWrapper import HandDetectorWrapper
 import numpy as np
 
 vid = cv2.VideoCapture(1)
 
+monitors = get_monitors()
+
+mainFrame = MainFrame(monitors[0].width, monitors[0].height)
 model = SmallClassifier()
 model.load_state_dict(torch.load("modelo_pointing2.pth"))
 model.eval()
 
 hand_detector = HandDetectorWrapper(maxHands=1, detectionCon=0.2, minTrackCon=0.1)
-mainFrame = MainFrame()
 mouse_publisher = MousePublisher()
 undo_history: list[Command] = []
 redo_history: list[Command] = []
 toggleable_ui_elements: list[ToggleableUI] = []
-color = Color(50, 50, 255)  # Default color set to black
+color = DEFAULT_COLOR  # Default color set to black
 draw_size = 10  # Default draw size
 
 timer = cv2.getTickCount()
@@ -63,7 +66,7 @@ def handle_button_down(event: Event):
     redo_history.clear()
 
     UIElement = mainFrame.get_element_clicked(event.position)
-    
+
     if isinstance(UIElement, Canvas):
         desactivate_all_toggleable_ui()
         canvas_handler = CanvasHandler(UIElement, event, color, draw_size)
@@ -85,7 +88,7 @@ def control_mouse_event(event, x, y, flags, param):
     # TODO: Put this in new class MouseHandler
     if event == cv2.EVENT_LBUTTONDOWN:
         handle_button_down(Event(Point(x, y), ActionType.LEFT_BUTTON_DOWN))
-        
+
     if event == cv2.EVENT_RBUTTONDOWN:
         handle_button_down(Event(Point(x, y), ActionType.RIGHT_BUTTON_DOWN))
 
@@ -98,12 +101,12 @@ def control_mouse_event(event, x, y, flags, param):
     if event == cv2.EVENT_LBUTTONUP or event == cv2.EVENT_RBUTTONUP:
         mouse_publisher.clear_subscriber()
         redo_history.clear()
-    
+
     if event == cv2.EVENT_MOUSEWHEEL:
         change_draw_size(flags)
 
 mainFrame.add_cursor_listener(control_mouse_event)
-mainFrame.add_layer(Canvas(800, 600))
+mainFrame.add_layer(Canvas(monitors[0].width, monitors[0].height))
 color_picker = ColorPickerToggleable(Point(0, 550), 50, 50, ColorPicker(Point(0, 500), 200, 100), color=color, toggled_on=False)
 toggleable_ui_elements.append(color_picker)
 mainFrame.add_UI_element(color_picker)
@@ -118,12 +121,12 @@ first_click = True
 
 
 prev_index_finger_point: dict[str, Point] = {i: Point(400, 300) for i in range(21)}
-def normalize_finger_position(point: Point, prev_point: Point, img_width, img_height, canvas_width, canvas_height) -> Point:         
+def normalize_finger_position(point: Point, prev_point: Point, img_width, img_height, canvas_width, canvas_height) -> Point:
     if point is None:
         return None, prev_point
     point = point.scale_axes(1/img_width, 1/img_height)
     point = point.scale_axes(canvas_width, canvas_height)
-    point = point.lerp(prev_point, 0.3)    
+    point = point.lerp(prev_point, 0.3)
     point = point.scale(1.1)
     point = point.to_int()
 
@@ -132,7 +135,7 @@ def normalize_finger_position(point: Point, prev_point: Point, img_width, img_he
 while True:
     frame = vid.read()[1]
     frame = cv2.flip(frame, 1)  # Espejo para selfie view
-    
+
     hand_detector.setImage(frame)
     # hands = hand_detector.findHands(draw=True)
     hands = hand_detector.findHands(draw=False)
@@ -157,7 +160,7 @@ while True:
             prev_index_finger_point[i] = hand_points[i] if hand_points[i] is not None else prev_index_finger_point[i]
         mainFrame.set_hand(hand_points.values())
         index_finger_point = hand_points[8]
-        
+
         if index_finger_point is not None:
             if pred.item() > 0.8:
                 if start_timer:
@@ -177,7 +180,7 @@ while True:
                 redo_history.clear()
                 # cv2.putText(frame, "No dibujando", (10, 70), cv2.FONT_HERSHEY_PLAIN, 3, (0, 0, 255), 3)
                 mainFrame.set_cursor_type(1)
-            
+
             # dibujar posición del dedo índice
             mainFrame.set_cursor_position(index_finger_point)
 

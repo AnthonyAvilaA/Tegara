@@ -1,5 +1,3 @@
-from model.Color import Color
-from model.Point import Point
 from view.Canvas import Canvas
 from model.Clickeable import Clickeable
 import numpy as np
@@ -19,6 +17,8 @@ class MainFrame:
         self.cursor_type = 0  # 0: drawing, 1: pointer
         cv2.namedWindow(self.__title, cv2.WINDOW_AUTOSIZE | cv2.WINDOW_GUI_NORMAL | cv2.WINDOW_NORMAL)
         cv2.resizeWindow(self.__title, width, height)
+        cv2.namedWindow(self.__title, cv2.WINDOW_GUI_NORMAL | cv2.WINDOW_NORMAL)
+        cv2.setWindowProperty(self.__title, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
         self.redraw()
     
     def redraw(self) -> None:
@@ -28,13 +28,13 @@ class MainFrame:
         
         for element in self.__UI:
             self.draw_element(image, element)
-        
+
         if self.cursor is not None:
             self.draw_cursor(image)
-        
+
         for point in self.hand_data:
             cv2.circle(image, (point.get_x(), point.get_y()), 5, Color(255, 0, 0).get_tuple(), cv2.FILLED)
-            
+
         cv2.imshow(self.__title, image)
 
     def draw_element(self, image: np.ndarray, element: Clickeable):
@@ -46,10 +46,10 @@ class MainFrame:
         if point.get_y() + h > self.__height or point.get_x() + w > self.__width:
             print("UI element out of bounds", point, (w, h))
             return
-        
+
         element_img = element.get_image()
 
-        if np.any(element_img[..., : 4] < 255):    
+        if np.any(element_img[..., : 4] < 255):
             # Recorte de zona destino
             roi = image[point.get_y():point.get_y()+h, point.get_x():point.get_x()+w]
             # Alpha blend
@@ -125,15 +125,18 @@ class MainFrame:
     
     def get_current_layer_index(self) -> int:
         return self._current_layer
-    
+
     def set_cursor_position(self, point: Point) -> None:
         self.cursor = point
-    
+
     def set_cursor_type(self, cursor_type: int) -> None:
         self.cursor_type = cursor_type
-    
+
     def set_hand(self, hand_data: list[Point]) -> None:
         self.hand_data = hand_data
+
+    def get_title(self) -> str:
+        return self.__title
 
     def draw_cursor(self, image: np.ndarray) -> None:
         color = Color(0, 0, 0)
