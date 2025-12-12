@@ -9,20 +9,23 @@ from model.Color import Color
 class Canvas(Clickeable):
     def __init__(self, width: int, height: int) -> None:
         self._image = np.full((height, width, 4), 0, dtype=np.uint8)
-        self.__is_dirty = True
+        self.set_dirty()
         
     def get_image(self) -> np.ndarray:
         return self._image
     
     def set_image(self, image: np.ndarray) -> None:
         self._image = image
-        self.__is_dirty = True
+        self.set_dirty()
         
     def is_dirty(self) -> bool:
         return self.__is_dirty
     
     def clear_dirty(self) -> None:
         self.__is_dirty = False
+    
+    def set_dirty(self) -> None:
+        self.__is_dirty = True
 
     def get_color_at(self, point: Point) -> Color:
         r, g, b, a = self._image[point.get_y(), point.get_x()]

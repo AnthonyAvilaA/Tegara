@@ -107,7 +107,7 @@ def control_mouse_event(event, x, y, flags, param):
 
 mainFrame.add_cursor_listener(control_mouse_event)
 mainFrame.add_layer(Canvas(monitors[0].width, monitors[0].height))
-color_picker = ColorPickerToggleable(Point(0, 550), 50, 50, ColorPicker(Point(0, 500), 200, 100), color=color, toggled_on=False)
+color_picker = ColorPickerToggleable(Point(50, monitors[0].height - 200), 100, 100, ColorPicker(Point(50, monitors[0].height - 200), 400, 200), color=color, toggled_on=False)
 toggleable_ui_elements.append(color_picker)
 mainFrame.add_UI_element(color_picker)
 

@@ -67,22 +67,14 @@ class CanvasDrawCommand(Command, MouseListener):
                     new_point = point.addition(offset)
                     x, y = new_point.get_x(), new_point.get_y()
                     
-                    # Comprobación de límites del canvas
                     if 0 <= x < canvas_width and 0 <= y < canvas_height:
-                        candidate_pixel = CanvasPixel(new_point, Color(0, 0, 0)) 
                         
-                        # 2. Si ya hemos guardado el color original de este pixel (ya está en el set), 
-                        #    simplemente lo repintamos si es necesario y continuamos.
-                        pixel_found = next((p for p in self.changed_pixels if p == candidate_pixel), None)
-                        
-                        if pixel_found:
-                            image[y, x] = target_color_list
+                        if CanvasPixel(new_point, self.color) in self.changed_pixels:
                             continue
                                                 
                         original_color = self.canvas.get_color_at(new_point)
                         self.changed_pixels.add(CanvasPixel(new_point, original_color)) 
-                        
-                        image[y, x] = target_color_list 
+                        image[y, x] = target_color_list
 
     def line_points(self, prev_point: Point, actual_point: Point, new_point: Point) -> list[Point]:
         points = []

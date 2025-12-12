@@ -23,6 +23,10 @@ class Clickeable(ABC):
         pass
 
     @abstractmethod
+    def set_dirty() -> None:
+        pass
+
+    @abstractmethod
     def get_image(self):
         pass
     

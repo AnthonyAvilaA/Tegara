@@ -13,15 +13,15 @@ class ToggleableUI(Generic[T], Clickeable):
         self.__height = height
         self.__image = image
         self.__toggled_on = toggled_on
-        self.__is_dirty = True
+        self.set_dirty()
 
     def toggle(self) -> None:
         self.__toggled_on = not self.__toggled_on
-        self.__is_dirty = True
+        self.set_dirty()
     
     def set_toggle(self, state: bool) -> None:
         self.__toggled_on = state
-        self.__is_dirty = True
+        self.set_dirty()
 
     def get_image(self) -> np.ndarray:
         if self.__toggled_on:
@@ -31,16 +31,25 @@ class ToggleableUI(Generic[T], Clickeable):
     
     def set_image(self, image: np.ndarray) -> None:
         self.__image = image
-        self.__is_dirty = True
+        self.set_dirty()
     
     def is_dirty(self) -> bool:
-        return self.__is_dirty
+        if self.__toggled_on:
+            return self.element.is_dirty()
+        else:
+            return self.__is_dirty
     
     def clear_dirty(self) -> None:
         if self.__toggled_on:
             self.element.clear_dirty()
         else:
             self.__is_dirty = False
+
+    def set_dirty(self) -> None:
+        if self.__toggled_on:
+            self.element.set_dirty()
+        else:
+            self.__is_dirty = True
 
     def check_click(self, point: Point) -> bool:
         if self.__toggled_on:

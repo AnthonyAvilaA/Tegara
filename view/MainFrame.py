@@ -2,6 +2,7 @@ from view.Canvas import Canvas
 from model.Point import Point
 from model.Color import Color
 from model.Clickeable import Clickeable
+from screeninfo import get_monitors
 import numpy as np
 import cv2
 
@@ -10,9 +11,10 @@ class MainFrame:
         self.__title = "AirCanvas"
         self.__layers: list[Canvas] = []
         self.__UI: list[Clickeable] = []
+        self.__layer_rotation = 0.0
+        self.__layer_center = Point(width // 2, height // 2)
         self.__width = width
         self.__height = height
-        self.__rotation = 0.0
         self.__current_layer = 0
         self.__image = np.full((height, width, 4), 255, dtype=np.uint8)
         self.__cursor: Point = None
@@ -22,6 +24,7 @@ class MainFrame:
         cv2.resizeWindow(self.__title, width, height)
         cv2.namedWindow(self.__title, cv2.WINDOW_GUI_NORMAL | cv2.WINDOW_NORMAL)
         cv2.setWindowProperty(self.__title, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+
         self.redraw()
     
     def redraw(self) -> None:
@@ -56,14 +59,14 @@ class MainFrame:
         point = element.get_origin_point()
         h = element.get_height()
         w = element.get_width()
-
+        
         # Asegurar que no se salga
         if point.get_y() + h > self.__height or point.get_x() + w > self.__width:
             print("UI element out of bounds", point, (w, h))
             return
 
         element_img = element.get_image()
-
+        
         if np.any(element_img[..., : 4] < 255):
             # Recorte de zona destino
             roi = image[point.get_y():point.get_y()+h, point.get_x():point.get_x()+w]
