@@ -23,11 +23,13 @@ import cv2
 from model.SmallClassifier import SmallClassifier
 import torch
 from model.HandDetectorWrapper import HandDetectorWrapper
-import numpy as np
+import queue
+from control.HandTrackerThread import HandTrackerThread
 
 vid = cv2.VideoCapture(1)
 
 monitors = get_monitors()
+event_queue = queue.Queue()
 
 mainFrame = MainFrame(monitors[0].width, monitors[0].height)
 model = SmallClassifier()
@@ -45,6 +47,15 @@ draw_size = 10  # Default draw size
 timer = cv2.getTickCount()
 pointing_timer = cv2.getTickCount()
 start_timer = True
+
+hand_thread = HandTrackerThread(
+    event_queue,
+    vid,
+    hand_detector,
+    model,
+    mainFrame
+)
+hand_thread.start()
 
 # temporal
 def change_draw_size(flags: int):
@@ -119,77 +130,38 @@ key_listener.add_command_for_key(NoneCommand(), Key.NONE)
 
 first_click = True
 
-
 prev_index_finger_point: dict[str, Point] = {i: Point(400, 300) for i in range(21)}
-def normalize_finger_position(point: Point, prev_point: Point, img_width, img_height, canvas_width, canvas_height) -> Point:
-    if point is None:
-        return None, prev_point
-    point = point.scale_axes(1/img_width, 1/img_height)
-    point = point.scale_axes(canvas_width, canvas_height)
-    point = point.lerp(prev_point, 0.3)
-    point = point.scale(1.1)
-    point = point.to_int()
 
-    return point
 
 while True:
-    frame = vid.read()[1]
-    frame = cv2.flip(frame, 1)  # Espejo para selfie view
 
-    hand_detector.setImage(frame)
-    # hands = hand_detector.findHands(draw=True)
-    hands = hand_detector.findHands(draw=False)
+    # =========== PROCESAR EVENTOS DEL HILO ===========
+    while not event_queue.empty():
+        ev = event_queue.get()
 
-    if hands:
-        hand = hands[0]
-        lmList = hand['lmList']
-        x = list()
-        for i in model.normalize_sample(lmList):
-            if i is not None:
-                x.append(i)
-        x = np.array(x).flatten().astype(np.float32)
-        x = torch.tensor(x, dtype=torch.float32).unsqueeze(0)  # batch=1
-        with torch.no_grad():
-            pred = model(x)
+        if ev["type"] == "cursor_update":
+            mainFrame.set_hand(ev["points"].values())
+        
+        elif ev["type"] == "cursor_type":
+            mainFrame.set_cursor_type(ev["cursor"])
 
-        hand_points = hand_detector.get_hand_points(hands, 0)
-        for i in range(len(hand_points)):
-            hand_points[i] = normalize_finger_position(hand_points[i], prev_index_finger_point[i],
-                                                      frame.shape[1], frame.shape[0],
-                                                      mainFrame.get_window_size()[0], mainFrame.get_window_size()[1])
-            prev_index_finger_point[i] = hand_points[i] if hand_points[i] is not None else prev_index_finger_point[i]
-        mainFrame.set_hand(hand_points.values())
-        index_finger_point = hand_points[8]
+        elif ev["type"] == "cursor_position":
+            mainFrame.set_cursor_position(ev["point"])
 
-        if index_finger_point is not None:
-            if pred.item() > 0.8:
-                if start_timer:
-                    pointing_timer = cv2.getTickCount() + 0.3 * cv2.getTickFrequency()
-                    start_timer = False
-                elif cv2.getTickCount() > pointing_timer:
-                    if first_click:
-                        handle_button_down(Event(index_finger_point, ActionType.LEFT_BUTTON_DOWN))
-                        first_click = False
-                    mouse_publisher.notify_click(Event(index_finger_point, ActionType.LEFT_DRAG))
-                    # cv2.putText(frame, "Dibujando", (10, 70), cv2.FONT_HERSHEY_PLAIN, 3, (0, 255, 0), 3)
-                    mainFrame.set_cursor_type(0)
-            else:
-                start_timer = True
-                first_click = True
-                mouse_publisher.clear_subscriber()
-                redo_history.clear()
-                # cv2.putText(frame, "No dibujando", (10, 70), cv2.FONT_HERSHEY_PLAIN, 3, (0, 0, 255), 3)
-                mainFrame.set_cursor_type(1)
+        elif ev["type"] == "left_down":
+            handle_button_down(Event(ev["point"], ActionType.LEFT_BUTTON_DOWN))
 
-            # dibujar posición del dedo índice
-            mainFrame.set_cursor_position(index_finger_point)
+        elif ev["type"] == "left_drag":
+            mouse_publisher.notify_click(Event(ev["point"], ActionType.LEFT_DRAG))
 
-    # cv2.imshow("Hand Tracking", frame)
+        elif ev["type"] == "reset_drag":
+            mouse_publisher.clear_subscriber()
+            redo_history.clear()
 
+    # =========== REDIBUJAR ===========
     mainFrame.redraw()
-    key  = cv2.waitKey(10) # No meter dentro del if porque condiciona el refresco de la ventana
 
+    key = cv2.waitKey(1)
     if not mouse_publisher.has_subscriber() or key == Key.ESC:
         key_listener.get_command(key).execute()
-
 
