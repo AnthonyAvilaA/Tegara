@@ -60,7 +60,7 @@ class MainFrame:
         return False
     
     def draw_element(self, image: np.ndarray, element: Clickeable):
-        point = element.get_origin_point()
+        point: Point = element.get_origin_point()
         h = element.get_height()
         w = element.get_width()
         
@@ -70,7 +70,6 @@ class MainFrame:
             return
 
         element_img = element.get_image()
-        
         if not element.is_opaque():
             # Recorte de zona destino
             roi = image[point.get_y():point.get_y()+h, point.get_x():point.get_x()+w]

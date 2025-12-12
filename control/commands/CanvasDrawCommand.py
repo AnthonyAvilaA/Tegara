@@ -10,53 +10,62 @@ from model.CanvasPixel import CanvasPixel
 
 class CanvasDrawCommand(Command, MouseListener):
     def __init__(self, canvas: Canvas, color: Color, position: Point, draw_size: int) -> None:
-        self.canvas: Canvas = canvas
-        self.color: Color = color
-        self.position: Point = position
-        self.prev_position: Point = position
-        self.draw_size = draw_size
-        self.changed_pixels: set[CanvasPixel] = set()
+        self.__canvas: Canvas = canvas
+        self.__color: Color = color
+        self.__position: Point = position
+        self.__prev_position: Point = position
+        self.__draw_size = draw_size
+        self.__changed_pixels: set[CanvasPixel] = set()
+        self.__points_since_last_update = 0
     
     def execute(self):
-        if self.changed_pixels:
+        if self.__changed_pixels:
             self.redo()
             return
             
-        image = self.canvas.get_image()
-        self.draw_point(self.position, image)
-        self.canvas.set_image(image)
+        image = self.__canvas.get_image()
+        self.draw_point(self.__position, image)
+        self.__canvas.set_image(image)
     
     def redo(self):
-        image = self.canvas.get_image()
-        color_list = self.color.get_list()
-        for pixel in self.changed_pixels:
+        image = self.__canvas.get_image()
+        color_list = self.__color.get_list()
+        for pixel in self.__changed_pixels:
             image[pixel.get_y(), pixel.get_x()] = color_list
-        self.canvas.set_image(image)
+        self.__canvas.set_image(image)
         return
 
     def undo(self):
-        image = self.canvas.get_image()
-        for pixel in self.changed_pixels:
+        image = self.__canvas.get_image()
+        for pixel in self.__changed_pixels:
             image[pixel.get_y(), pixel.get_x()] = pixel.color.get_list()
-        self.canvas.set_image(image)
+        self.__canvas.set_image(image)
 
     def on_mouse_event(self, event) -> None:
         new_position: Point = event.position
-        __line_points = self.__line_points(self.prev_position, self.position, new_position)
-        image = self.canvas.get_image()
+        __line_points = self.__line_points(self.__prev_position, self.__position, new_position)
+        image = self.__canvas.get_image()
 
         for point in __line_points:
             self.draw_point(point, image)
-        self.canvas.set_image(image)
+            self.__points_since_last_update += 1
+        
+        if self.__points_since_last_update > self.__draw_size * 4:
+            self.__canvas.set_image(image)
+            self.__points_since_last_update = 0
 
-        self.prev_position = self.position
-        self.position = new_position
+        self.__prev_position = self.__position
+        self.__position = new_position
+
+    def on_mouse_release(self) -> None:
+        image = self.__canvas.get_image()
+        self.__canvas.set_image(image)
 
     def draw_point(self, point: Point, image: ndarray) -> None:
-        canvas_width = self.canvas.get_width()
-        canvas_height = self.canvas.get_height()
-        target_color_list = self.color.get_list()
-        radius = self.draw_size // 2
+        canvas_width = self.__canvas.get_width()
+        canvas_height = self.__canvas.get_height()
+        target_color_list = self.__color.get_list()
+        radius = self.__draw_size // 2
         radius_sq = radius * radius
         
         for dx in range(-radius, radius + 1):
@@ -71,12 +80,12 @@ class CanvasDrawCommand(Command, MouseListener):
                         continue
                     
                     if 0 <= x < canvas_width and 0 <= y < canvas_height:    
-                        original_color = self.canvas.get_color_at(new_point)
-                        self.changed_pixels.add(CanvasPixel(new_point, original_color)) 
+                        original_color = self.__canvas.get_color_at(new_point)
+                        self.__changed_pixels.add(CanvasPixel(new_point, original_color)) 
                         image[y, x] = target_color_list
 
     def __is_point_in_canvas(self, point: Point) -> bool:
-        return CanvasPixel(point, self.color) in self.changed_pixels                        
+        return CanvasPixel(point, self.__color) in self.__changed_pixels                        
 
     def __line_points(self, prev_point: Point, actual_point: Point, new_point: Point) -> list[Point]:
         points = []

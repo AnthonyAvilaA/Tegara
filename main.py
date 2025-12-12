@@ -156,7 +156,6 @@ while True:
 
         elif ev["type"] == "reset_drag":
             mouse_publisher.clear_subscriber()
-            redo_history.clear()
 
     # =========== REDIBUJAR ===========
     mainFrame.redraw()

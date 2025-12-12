@@ -44,7 +44,7 @@ class HandTrackerThread(threading.Thread):
             hands = self.hand_detector.findHands(draw=False)
 
             if not hands:
-                time.sleep(0.01)
+                time.sleep(0.005)
                 continue
 
             # ======== Clasificación ========

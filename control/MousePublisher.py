@@ -13,7 +13,9 @@ class MousePublisher:
             self.subscriber.on_mouse_event(event)
     
     def clear_subscriber(self) -> None:
-        self.subscriber = None
+        if self.subscriber:
+            self.subscriber.on_mouse_release()
+            self.subscriber = None
 
     def has_subscriber(self) -> bool:
         return self.subscriber is not None
