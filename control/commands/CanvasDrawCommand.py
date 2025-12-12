@@ -9,14 +9,16 @@ from model.CanvasPixel import CanvasPixel
 
 
 class CanvasDrawCommand(Command, MouseListener):
-    def __init__(self, canvas: Canvas, color: Color, position: Point, draw_size: int) -> None:
+    def __init__(self, canvas: Canvas, color: Color, position: Point, draw_size: int, max_points_for_line: int = 60, optimization_factor: int = 3) -> None:
         self.__canvas: Canvas = canvas
         self.__color: Color = color
         self.__position: Point = position
-        self.__prev_position: Point = position
+        self.__prev_position: list[Point] = [position]
         self.__draw_size = draw_size
         self.__changed_pixels: set[CanvasPixel] = set()
         self.__points_since_last_update = 0
+        self.__optimization_factor = optimization_factor
+        self.__max_points_for_line = max_points_for_line
     
     def execute(self):
         if self.__changed_pixels:
@@ -43,18 +45,20 @@ class CanvasDrawCommand(Command, MouseListener):
 
     def on_mouse_event(self, event) -> None:
         new_position: Point = event.position
-        __line_points = self.__line_points(self.__prev_position, self.__position, new_position)
+        __line_points = self.__line_points(new_position)
         image = self.__canvas.get_image()
 
         for point in __line_points:
             self.draw_point(point, image)
             self.__points_since_last_update += 1
         
-        if self.__points_since_last_update > self.__draw_size * 4:
+        if self.__points_since_last_update > self.__draw_size * self.__optimization_factor:
             self.__canvas.set_image(image)
             self.__points_since_last_update = 0
 
-        self.__prev_position = self.__position
+        self.__prev_position.append(self.__position)
+        if len(self.__prev_position) > 5:
+            self.__prev_position.pop(0)
         self.__position = new_position
 
     def on_mouse_release(self) -> None:
@@ -87,20 +91,25 @@ class CanvasDrawCommand(Command, MouseListener):
     def __is_point_in_canvas(self, point: Point) -> bool:
         return CanvasPixel(point, self.__color) in self.__changed_pixels                        
 
-    def __line_points(self, prev_point: Point, actual_point: Point, new_point: Point) -> list[Point]:
+    def __line_points(self, new_position: Point) -> list[Point]:
         points = []
 
-        x0, y0 = prev_point.get_x(), prev_point.get_y()
-        x1, y1 = actual_point.get_x(), actual_point.get_y()
-        x2, y2 = new_point.get_x(), new_point.get_y()
-        x3, y3 = x2, y2
+        p0 = self.__prev_position[-2] if len(self.__prev_position) >= 2 else self.__prev_position[-1]
+        p1 = self.__prev_position[-1]
+        p2 = self.__position
+        p3 = new_position
+
+        x0, y0 = p0.get_x(), p0.get_y()
+        x1, y1 = p1.get_x(), p1.get_y()
+        x2, y2 = p2.get_x(), p2.get_y()
+        x3, y3 = p3.get_x(), p3.get_y()
+
 
         dist = math.hypot(x2 - x1, y2 - y1)
 
         # Calcular STEPS dinámicos
-        MAX_STEPS = 50
         STEPS = int(dist * 0.4)
-        STEPS = max(4, min(MAX_STEPS, STEPS))  # clamp
+        STEPS = max(4, min(self.__max_points_for_line, STEPS))  # clamp
 
         for i in range(STEPS + 1):
             t = i / STEPS
