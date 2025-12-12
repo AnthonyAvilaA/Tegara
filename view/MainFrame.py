@@ -1,7 +1,8 @@
 from view.Canvas import Canvas
 from model.Point import Point
-from model.Color import Color
+from model.Color import Color, BLACK
 from model.Clickeable import Clickeable
+from control.MouseListener import MouseListener
 from screeninfo import get_monitors
 import numpy as np
 import cv2
@@ -29,20 +30,23 @@ class MainFrame:
     
     def redraw(self) -> None:
         if self.needs_redraw():
-            self.__image = np.full((self.__height, self.__width, 4), 255, dtype=np.uint8)
+            image_to_draw_on = np.full((self.__height, self.__width, 4), 255, dtype=np.uint8)
             for layer in self.__layers:
-                self.draw_element(self.__image, layer)
+                self.draw_element(image_to_draw_on, layer)
             
             for element in self.__UI:
-                self.draw_element(self.__image, element)
-            
-        image_copy = self.__image.copy()     
+                self.draw_element(image_to_draw_on, element)
+
+            self.__image = image_to_draw_on
+        
+        image_display = self.__image.copy()   
+
         for point in self.__hand_data:
-            cv2.circle(image_copy, (point.get_x(), point.get_y()), 5, Color(255, 0, 0).get_tuple(), cv2.FILLED)
+            cv2.circle(image_display, (point.get_x(), point.get_y()), 5, Color(255, 0, 0).get_tuple(), cv2.FILLED)
         if self.__cursor is not None:
-            self.draw_cursor(image_copy)
+            self.draw_cursor(image_display)
             
-        cv2.imshow(self.__title, image_copy)
+        cv2.imshow(self.__title, image_display)
 
     def needs_redraw(self) -> bool:
         for element in self.__UI:
@@ -67,7 +71,7 @@ class MainFrame:
 
         element_img = element.get_image()
         
-        if np.any(element_img[..., : 4] < 255):
+        if not element.is_opaque():
             # Recorte de zona destino
             roi = image[point.get_y():point.get_y()+h, point.get_x():point.get_x()+w]
             # Alpha blend
@@ -101,7 +105,7 @@ class MainFrame:
         # 5. Concatenate and cast back to uint8
         return np.concatenate((out_rgb, out_alpha), axis=2).astype(np.uint8)
 
-    def add_cursor_listener(self, listener) -> None:
+    def add_cursor_listener(self, listener: MouseListener) -> None:
         cv2.setMouseCallback(self.__title, listener)
         
     def add_layer(self, canva: Canvas) -> None:
@@ -160,7 +164,7 @@ class MainFrame:
         return self.__title
 
     def draw_cursor(self, image: np.ndarray) -> None:
-        color = Color(0, 0, 0)
+        color = BLACK
         if self.__cursor.get_x() < 0 or self.__cursor.get_x() >= self.__width or self.__cursor.get_y() < 0 or self.__cursor.get_y() >= self.__height:
             return
         if self.__cursor_type == 1:

@@ -82,3 +82,9 @@ class ToggleableUI(Generic[T], Clickeable):
     
     def is_toggled_on(self) -> bool:
         return self.__toggled_on
+    
+    def is_opaque(self) -> bool:
+        if self.__toggled_on:
+            return self.element.is_opaque()
+        else:
+            raise RuntimeError("This method should be overridden")

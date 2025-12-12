@@ -24,6 +24,9 @@ class Canvas(Clickeable):
     def clear_dirty(self) -> None:
         self.__is_dirty = False
     
+    def is_opaque(self) -> bool:
+        return False
+
     def set_dirty(self) -> None:
         self.__is_dirty = True
 

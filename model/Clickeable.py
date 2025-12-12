@@ -27,6 +27,10 @@ class Clickeable(ABC):
         pass
 
     @abstractmethod
+    def is_opaque() -> bool:
+        pass
+
+    @abstractmethod
     def get_image(self):
         pass
     

@@ -42,10 +42,10 @@ class CanvasDrawCommand(Command, MouseListener):
 
     def on_mouse_event(self, event) -> None:
         new_position: Point = event.position
-        line_points = self.line_points(self.prev_position, self.position, new_position)
+        __line_points = self.__line_points(self.prev_position, self.position, new_position)
         image = self.canvas.get_image()
 
-        for point in line_points:
+        for point in __line_points:
             self.draw_point(point, image)
         self.canvas.set_image(image)
 
@@ -67,16 +67,18 @@ class CanvasDrawCommand(Command, MouseListener):
                     new_point = point.addition(offset)
                     x, y = new_point.get_x(), new_point.get_y()
                     
-                    if 0 <= x < canvas_width and 0 <= y < canvas_height:
-                        
-                        if CanvasPixel(new_point, self.color) in self.changed_pixels:
-                            continue
-                                                
+                    if self.__is_point_in_canvas(new_point):
+                        continue
+                    
+                    if 0 <= x < canvas_width and 0 <= y < canvas_height:    
                         original_color = self.canvas.get_color_at(new_point)
                         self.changed_pixels.add(CanvasPixel(new_point, original_color)) 
                         image[y, x] = target_color_list
 
-    def line_points(self, prev_point: Point, actual_point: Point, new_point: Point) -> list[Point]:
+    def __is_point_in_canvas(self, point: Point) -> bool:
+        return CanvasPixel(point, self.color) in self.changed_pixels                        
+
+    def __line_points(self, prev_point: Point, actual_point: Point, new_point: Point) -> list[Point]:
         points = []
 
         x0, y0 = prev_point.get_x(), prev_point.get_y()

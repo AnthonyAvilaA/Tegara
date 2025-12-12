@@ -53,6 +53,9 @@ class ColorPickerToggleable(ToggleableUI[ColorPicker]):
         return 0.5, cv2.getTextSize(text, font, 0.5, thickness)[0]  # fallback
     """
 
+    def is_opaque(self):
+        return False
+
     def create_image(self) -> np.ndarray:
         height = super().get_height()
         width = super().get_width()

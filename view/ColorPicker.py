@@ -25,6 +25,9 @@ class ColorPicker(Clickeable):
     def get_image(self) -> np.ndarray:
         return self.__image
     
+    def is_opaque(self) -> bool:
+        return True
+    
     def is_dirty(self) -> bool:
         return self.__is_dirty
     
