@@ -15,7 +15,7 @@ from model.Event import Event
 from model.ActionType import ActionType
 from control.handlers.CanvasHandler import CanvasHandler
 from control.handlers.ToggleableUIHandler import ToggleableUIHandler
-from control.Command import Command
+from control.commands.Command import Command
 from model.Point import Point
 from view.ColorPicker import ColorPicker
 from screeninfo import get_monitors
@@ -24,7 +24,7 @@ from model.SmallClassifier import SmallClassifier
 import torch
 from model.HandDetectorWrapper import HandDetectorWrapper
 import queue
-from control.HandTrackerThread import HandTrackerThread
+from control.threads.HandTrackerThread import HandTrackerThread
 
 vid = cv2.VideoCapture(1)
 

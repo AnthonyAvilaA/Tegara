@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from model.Event import Event
-from control.Command import Command
+from control.commands.Command import Command
 
 class CommandHandler(ABC):
     @abstractmethod

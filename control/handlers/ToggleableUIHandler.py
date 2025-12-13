@@ -1,6 +1,6 @@
 from view.ToggleableUI import ToggleableUI
 from control.commands.PickColorCommand import PickColorCommand
-from control.CommandHandler import CommandHandler
+from control.handlers.CommandHandler import CommandHandler
 from model.Event import Event
 
 class ToggleableUIHandler(CommandHandler):

@@ -1,4 +1,4 @@
-from control.Command import Command
+from control.commands.Command import Command
 from control.commands.KeyDebugCommand import KeyDebugCommand
 from definitions.key import Key
 

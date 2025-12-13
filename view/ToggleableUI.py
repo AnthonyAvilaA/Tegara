@@ -1,4 +1,4 @@
-from model.Clickeable import Clickeable
+from view.Clickeable import Clickeable
 from typing import Generic, TypeVar
 from model.Point import Point
 import numpy as np

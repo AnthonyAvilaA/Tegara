@@ -1,5 +1,5 @@
 from control.commands.CanvasDrawCommand import CanvasDrawCommand
-from control.CommandHandler import CommandHandler
+from control.handlers.CommandHandler import CommandHandler
 from view.Canvas import Canvas
 from model.Event import Event
 from model.Color import Color
@@ -15,7 +15,15 @@ class CanvasHandler(CommandHandler):
     def get_command(self) -> CanvasDrawCommand:
         match self.event.action_type:
             case ActionType.LEFT_BUTTON_DOWN:
-                return CanvasDrawCommand(self.canvas, self.color, self.event.position, self.draw_size)
+                line_density = 3 / self.draw_size
+                optimization = line_density * 2
+                return CanvasDrawCommand(canvas=self.canvas,
+                                         color=self.color,
+                                         position=self.event.position,
+                                         draw_size=self.draw_size,
+                                         line_density_factor=line_density,
+                                         max_points_for_line=80,
+                                         optimization_factor=optimization)
             case _:
                 return None
             

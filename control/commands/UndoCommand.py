@@ -1,4 +1,4 @@
-from control.Command import Command
+from control.commands.Command import Command
 
 class UndoCommand(Command):
     def __init__(self, undo_history, redo_history):

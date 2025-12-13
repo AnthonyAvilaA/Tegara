@@ -1,4 +1,4 @@
-from control.Command import Command
+from control.commands.Command import Command
 from model.Point import Point
 from view.ColorPickerToggleable import ColorPickerToggleable
 from model.Color import Color

@@ -1,4 +1,4 @@
-from model.Clickeable import Clickeable
+from view.Clickeable import Clickeable
 from model.Point import Point
 from model.Color import Color
 import numpy as np
@@ -51,69 +51,19 @@ class ColorPicker(Clickeable):
             return None
     
     def _generate_full_hsv(self):
-        """
-        Genera una paleta completa HSV:
-        - Hue: horizontal (0–179)
-        - Saturation: vertical (0–255)
-        - Value: fijo a 255
-        """
-        hsv = np.zeros((self.__height, self.__width, 3), dtype=np.uint8)
+        h = np.linspace(0, 179, self.__width, dtype=np.uint8)
+        v = np.linspace(255, 0, self.__height, dtype=np.uint8)
+        s = np.linspace(0, 255, self.__height, dtype=np.uint8)
 
-        for y in range(self.__height * 1 // 12):
-            for x in range(self.__width):
+        # Expandir dimensiones
+        H = np.tile(h, (self.__height, 1))
+        V = np.tile(v[:, None], (1, self.__width))
+        S = np.tile(s[:, None], (1, self.__width))
 
-                # Hue → a lo largo del eje X (todo el espectro)
-                h = int((x / (self.__width - 1)) * 179)
+        # Construir imagen HSV
+        hsv = np.dstack((H, S, V))
 
-                # Saturation → fijo a 0 (gris/blanco)
-                s = 0
-
-                # Value → fijo a máximo brillo
-                v = 255
-
-                hsv[y, x] = [h, s, v]
-
-        for y in range(self.__height * 1 // 12, self.__height * 6 // 12):
-            for x in range(self.__width):
-
-                # Hue → a lo largo del eje X (todo el espectro)
-                h = int((x / (self.__width - 1)) * 179)
-
-                # Saturation → de gris/blanco (arriba) a color puro (abajo)
-                s = int((y / (self.__height // 2 - 1)) * 255)
-
-                # Value → fijo a máximo brillo
-                v = 255
-
-                hsv[y, x] = [h, s, v]
-        for y in range(self.__height * 6 // 12, self.__height * 11 // 12):
-            for x in range(self.__width):
-
-                # Hue → a lo largo del eje X (todo el espectro)
-                h = int((x / (self.__width - 1)) * 179)
-
-                # Saturation → de color puro (arriba) a gris (abajo)
-                s = int(((self.__height - 1 - y) / (self.__height // 2 - 1)) * 255)
-
-                # Value → fijo a máximo brillo
-                v = (255 - int(((y - self.__height // 2) / (self.__height // 2 - 1)) * 255))
-
-                hsv[y, x] = [h, s, v]
-        
-        for y in range(self.__height * 11 // 12, self.__height):
-            for x in range(self.__width):
-
-                # Hue → a lo largo del eje X (todo el espectro)
-                h = int((x / (self.__width - 1)) * 179)
-
-                # Saturation → fijo a 0 (gris/blanco)
-                s = 0
-
-                # Value → fijo a 0 (negro)
-                v = 0
-
-                hsv[y, x] = [h, s, v]
-
+        # Convertir a RGB y luego a RGBA
         rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
-        rgba = np.dstack([rgb, np.full((self.__height, self.__width), 255, dtype=np.uint8)])
+        rgba = np.dstack([rgb, np.full_like(rgb[:, :, 0], 255)])
         return rgba

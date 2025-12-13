@@ -1,6 +1,6 @@
-from model.Clickeable import Clickeable
+from view.Clickeable import Clickeable
 from model.ActionType import ActionType
-from control.Command import Command
+from control.commands.Command import Command
 from model.Point import Point
 import numpy as np
 

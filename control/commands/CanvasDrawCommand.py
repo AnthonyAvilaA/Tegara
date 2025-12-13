@@ -1,6 +1,6 @@
 import math
 from numpy import ndarray
-from control.Command import Command
+from control.commands.Command import Command
 from control.MouseListener import MouseListener
 from model.Point import Point
 from model.Color import Color
@@ -9,7 +9,7 @@ from model.CanvasPixel import CanvasPixel
 
 
 class CanvasDrawCommand(Command, MouseListener):
-    def __init__(self, canvas: Canvas, color: Color, position: Point, draw_size: int, max_points_for_line: int = 60, optimization_factor: int = 3) -> None:
+    def __init__(self, canvas: Canvas, color: Color, position: Point, draw_size: int, line_density_factor = 0.4, max_points_for_line: int = 60, optimization_factor: float = 3) -> None:
         self.__canvas: Canvas = canvas
         self.__color: Color = color
         self.__position: Point = position
@@ -19,6 +19,7 @@ class CanvasDrawCommand(Command, MouseListener):
         self.__points_since_last_update = 0
         self.__optimization_factor = optimization_factor
         self.__max_points_for_line = max_points_for_line
+        self.__line_density_factor = line_density_factor
     
     def execute(self):
         if self.__changed_pixels:
@@ -108,7 +109,7 @@ class CanvasDrawCommand(Command, MouseListener):
         dist = math.hypot(x2 - x1, y2 - y1)
 
         # Calcular STEPS dinámicos
-        STEPS = int(dist * 0.4)
+        STEPS = int(dist * self.__line_density_factor)
         STEPS = max(4, min(self.__max_points_for_line, STEPS))  # clamp
 
         for i in range(STEPS + 1):

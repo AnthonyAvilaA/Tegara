@@ -1,4 +1,4 @@
-from control.Command import Command
+from control.commands.Command import Command
 import cv2
 
 class ExitCommand(Command):

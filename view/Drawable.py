@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 from model.Point import Point
+from numpy import ndarray
 
-class Clickeable(ABC):
+class Drawable(ABC):
     @abstractmethod
     def get_origin_point() -> Point:
         pass
@@ -13,27 +14,11 @@ class Clickeable(ABC):
     @abstractmethod
     def get_height() -> int:
         pass
-    
-    @abstractmethod
-    def is_dirty() -> bool:
-        pass
-    
-    @abstractmethod
-    def clear_dirty() -> None:
-        pass
-
-    @abstractmethod
-    def set_dirty() -> None:
-        pass
 
     @abstractmethod
     def is_opaque() -> bool:
         pass
 
     @abstractmethod
-    def get_image(self):
-        pass
-    
-    @abstractmethod
-    def check_click(self, point: Point) -> bool:
+    def get_image() -> ndarray:
         pass

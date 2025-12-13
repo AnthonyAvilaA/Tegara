@@ -1,5 +1,5 @@
 from turtle import color
-from control.CommandHandler import CommandHandler
+from control.handlers.CommandHandler import CommandHandler
 from view.ColorPicker import ColorPicker
 from view.ToggleableUI import ToggleableUI
 from model.Point import Point

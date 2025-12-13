@@ -1,7 +1,7 @@
 from view.Canvas import Canvas
 from model.Point import Point
 from model.Color import Color, BLACK
-from model.Clickeable import Clickeable
+from view.Clickeable import Clickeable
 from control.MouseListener import MouseListener
 from screeninfo import get_monitors
 import numpy as np
