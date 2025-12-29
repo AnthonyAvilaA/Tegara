@@ -6,7 +6,7 @@ from control.commands.RedoCommand import RedoCommand
 from view.ColorPickerToggleable import ColorPickerToggleable
 from view.ToggleableUI import ToggleableUI
 from control.handlers.KeyHandler import KeyHandler
-from definitions.key import Key
+from definitions.Key import Key
 from view.Canvas import Canvas
 from model.Color import Color, DEFAULT_COLOR
 from view.MainFrame import MainFrame
@@ -27,6 +27,8 @@ import queue
 from control.threads.HandTrackerThread import HandTrackerThread
 from view.Menu import Menu
 from view.MenuIcon import MenuIcon
+from definitions.Tools import Tools
+from control.ToolStatus import ToolStatus
 
 vid = cv2.VideoCapture(0)
 
@@ -45,6 +47,7 @@ redo_history: list[Command] = []
 toggleable_ui_elements: list[ToggleableUI] = []
 color = DEFAULT_COLOR  # Default color set to black
 draw_size = 10  # Default draw size
+tool_status = ToolStatus(Tools.PENCIL)
 
 timer = cv2.getTickCount()
 pointing_timer = cv2.getTickCount()
@@ -82,7 +85,7 @@ def handle_button_down(event: Event):
 
     if isinstance(UIElement, Canvas):
         desactivate_all_toggleable_ui()
-        canvas_handler = CanvasHandler(UIElement, event, color, draw_size)
+        canvas_handler = CanvasHandler(UIElement, event, color, draw_size, tool_status.get_tool())
         command = canvas_handler.get_command()
         start_command(command)
     elif isinstance(UIElement, ColorPickerToggleable):
@@ -92,6 +95,14 @@ def handle_button_down(event: Event):
         new_color = toggle_color_command.get_color_selected()
         if new_color is not None:
             color = new_color
+    elif isinstance(UIElement, Menu):
+        desactivate_all_toggleable_ui()
+        menu_icon: MenuIcon = UIElement.get_icon_clicked(event.position)
+        if menu_icon is not None:
+            tool_type = menu_icon.get_type()
+            tool_status.set_tool(tool_type)
+
+        
 
 def handle_scroll(event: Event):
     UIElement = mainFrame.get_element_selected(event.position)
@@ -132,14 +143,16 @@ toggleable_ui_elements.append(color_picker)
 mainFrame.add_UI_element(color_picker)
 vertical_menu = Menu(Point(10, 10), Color(150, 150, 150, 200), border_width=2, is_vertical=True, vertical_padding=30, horizontal_padding=20)
 icon_w, icon_h = 100, 100
-pencil_icon = MenuIcon(Point(0, 0), icon_w, icon_h, "./assets/lapiz.webp")
-borrador_icon = MenuIcon(Point(0, 0), icon_w, icon_h, "./assets/borrador.png")
-texto_ocr_icon = MenuIcon(Point(0, 0), icon_w, icon_h, "./assets/texto_ocr.png")
-selector_de_color_icon = MenuIcon(Point(0, 0), icon_w, icon_h, "./assets/selector_de_color.png")
-dibujo_asistido_yolo_icon = MenuIcon(Point(0, 0), icon_w, icon_h, "./assets/dibujo_asistido_yolo.png")
+pencil_icon = MenuIcon(Point(0, 0), Tools.PENCIL, icon_w, icon_h, "./assets/lapiz.webp")
+borrador_icon = MenuIcon(Point(0, 0), Tools.ERASER, icon_w, icon_h, "./assets/borrador.png")
+cubeta_de_color_icon = MenuIcon(Point(0, 0), Tools.FILL, icon_w, icon_h, "./assets/cubeta_de_color.png")
+selector_de_color_icon = MenuIcon(Point(0, 0), Tools.COLOR_PICKER, icon_w, icon_h, "./assets/selector_de_color.png")
+texto_ocr_icon = MenuIcon(Point(0, 0), Tools.TEXT, icon_w, icon_h, "./assets/texto_ocr.png")
+dibujo_asistido_yolo_icon = MenuIcon(Point(0, 0), Tools.ENCHANCED_PENCIL, icon_w, icon_h, "./assets/dibujo_asistido_yolo.png")
 
 vertical_menu.add_element(pencil_icon)
 vertical_menu.add_element(borrador_icon)
+vertical_menu.add_element(cubeta_de_color_icon)
 vertical_menu.add_element(selector_de_color_icon)
 vertical_menu.add_element(texto_ocr_icon)
 vertical_menu.add_element(dibujo_asistido_yolo_icon)

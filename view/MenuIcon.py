@@ -1,14 +1,16 @@
 from view.Clickeable import Clickeable
 from model.Point import Point
 import numpy as np
+import definitions.Tools as Tools
 import cv2
 
 class MenuIcon(Clickeable):
-    def __init__(self, origin: Point, width: int, height: int, image_src: str) -> None:
+    def __init__(self, origin: Point, type: Tools, width: int, height: int, image_src: str) -> None:
         self.origin = origin
         self.__image: np.ndarray
         self.__is_dirty = True
         self.__image = cv2.imread(image_src, cv2.IMREAD_UNCHANGED)
+        self.__type = type
         if self.__image is None:
             raise FileNotFoundError(f"Image file not found: {image_src}")
         
@@ -55,3 +57,6 @@ class MenuIcon(Clickeable):
 
     def get_height(self) -> int:
         return self.__image.shape[0]
+
+    def get_type(self) -> Tools:
+        return self.__type

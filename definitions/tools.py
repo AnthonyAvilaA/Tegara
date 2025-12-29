@@ -1,7 +1,7 @@
 from enum import IntEnum
 
 class Tools(IntEnum):
-    PEN = 1
+    PENCIL = 1
     ERASER = 2
     FILL = 3
     COLOR_PICKER = 4

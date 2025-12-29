@@ -1,6 +1,6 @@
 from cvzone.HandTrackingModule import HandDetector
 import cv2
-from definitions.key import Key
+from definitions.Key import Key
 import numpy as np
 import torch
 from model.SmallClassifier import SmallClassifier

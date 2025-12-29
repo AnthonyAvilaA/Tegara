@@ -35,7 +35,6 @@ class MainFrame:
                 self.draw_element(image_to_draw_on, layer)
             
             for element in self.__UI:
-                print("Drawing UI element:", element, element.get_origin_point(), element.get_width(), element.get_height())
                 self.draw_element(image_to_draw_on, element)
 
             self.__image = image_to_draw_on

@@ -42,6 +42,34 @@ class Menu(Clickeable):
             self.origin.get_y() <= point.get_y() <= self.origin.get_y() + menu_height):
             return True
         return False
+
+    def get_icon_clicked(self, point: Point) -> Clickeable | None:
+        #if not self.check_click(point): #inferido
+        #    return None
+
+        relative_x = point.get_x() - self.origin.get_x()
+        relative_y = point.get_y() - self.origin.get_y()
+
+        current_x = 0
+        current_y = 0
+
+        for element in self.elements:
+            elem_image = element.get_image()
+            h, w = elem_image.shape[:2]
+            
+            start_x = current_x + self.horizontal_padding // 2
+            start_y = current_y + self.vertical_padding // 2
+
+            if (start_x <= relative_x <= start_x + w and
+                start_y <= relative_y <= start_y + h):
+                return element
+
+            if self.is_vertical:
+                current_y += h + self.vertical_padding
+            else:
+                current_x += w + self.horizontal_padding
+        
+        return None
     
     def get_width(self) -> int:
         return self.__image.shape[1]
