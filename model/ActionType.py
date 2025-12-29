@@ -9,3 +9,4 @@ class ActionType(Enum):
     RIGHT_BUTTON_UP = 6
     LEFT_DRAG = 7
     RIGHT_DRAG = 8
+    SCROLL = 9

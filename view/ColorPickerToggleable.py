@@ -5,6 +5,7 @@ from view.ToggleableUI import ToggleableUI
 from model.Point import Point
 from model.Color import Color
 import numpy as np
+from model.Event import Event
 import cv2
 
 class ColorPickerToggleable(ToggleableUI[ColorPicker]):
@@ -12,6 +13,7 @@ class ColorPickerToggleable(ToggleableUI[ColorPicker]):
         super().__init__(point, width, height, None, color_picker, toggled_on)
         self.color = color
         super().set_image(self.create_image())
+        self.__point = Point(0,0)
     
     """
     def create_image(self) -> np.ndarray:
@@ -73,6 +75,15 @@ class ColorPickerToggleable(ToggleableUI[ColorPicker]):
 
     def get_color_at(self, point: Point) -> Color:
         element = super().get_element()
+        self.__point = point
         if super().is_toggled_on():
             return element.get_color_at(point)
         return None
+
+    def handle_scroll(self, event: Event):
+        element = super().get_element()
+        if super().is_toggled_on():
+            element.handle_scroll(event)
+            new_color = element.get_color_at(self.__point)
+            self.update_color(new_color)
+            super().set_dirty()

@@ -35,6 +35,7 @@ class MainFrame:
                 self.draw_element(image_to_draw_on, layer)
             
             for element in self.__UI:
+                print("Drawing UI element:", element, element.get_origin_point(), element.get_width(), element.get_height())
                 self.draw_element(image_to_draw_on, element)
 
             self.__image = image_to_draw_on
@@ -173,7 +174,7 @@ class MainFrame:
             cv2.line(image, (self.__cursor.get_x() - 10, self.__cursor.get_y()), (self.__cursor.get_x() + 10, self.__cursor.get_y()), color.get_tuple(), 2)
             cv2.line(image, (self.__cursor.get_x(), self.__cursor.get_y() - 10), (self.__cursor.get_x(), self.__cursor.get_y() + 10), color.get_tuple(), 2)
 
-    def get_element_clicked(self, point: Point) -> Clickeable | None:
+    def get_element_selected(self, point: Point) -> Clickeable | None:
         for element in self.__UI:
             if element.check_click(point):
                 return element

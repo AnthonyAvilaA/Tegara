@@ -1,8 +1,10 @@
+from sys import flags
 from view.Clickeable import Clickeable
 from model.Point import Point
 from model.Color import Color
 import numpy as np
 import cv2
+from model.Event import Event
 
 class ColorPicker(Clickeable):
     def __init__(self, origin: Point, width: int, height: int):
@@ -10,6 +12,7 @@ class ColorPicker(Clickeable):
         self.__width = width
         self.__height = height
         self.__image = np.full((height, width, 4), 0, dtype=np.uint8)
+        self.__saturation = 255
         self.__image = self._generate_full_hsv()
         self.set_dirty()
 
@@ -53,17 +56,19 @@ class ColorPicker(Clickeable):
     def _generate_full_hsv(self):
         h = np.linspace(0, 179, self.__width, dtype=np.uint8)
         v = np.linspace(255, 0, self.__height, dtype=np.uint8)
-        s = np.linspace(0, 255, self.__height, dtype=np.uint8)
 
-        # Expandir dimensiones
         H = np.tile(h, (self.__height, 1))
         V = np.tile(v[:, None], (1, self.__width))
-        S = np.tile(s[:, None], (1, self.__width))
+        S = np.full((self.__height, self.__width), self.__saturation, dtype=np.uint8)
 
-        # Construir imagen HSV
         hsv = np.dstack((H, S, V))
-
-        # Convertir a RGB y luego a RGBA
         rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
-        rgba = np.dstack([rgb, np.full_like(rgb[:, :, 0], 255)])
+        rgba = np.dstack([rgb, np.full((self.__height, self.__width), 255, dtype=np.uint8)])
         return rgba
+
+    
+    def handle_scroll(self, event: Event):
+        delta = event.flags // 2_000_000
+        self.__saturation = max(0, min(self.__saturation + delta, 255))
+        self.__image = self._generate_full_hsv()
+        self.set_dirty()

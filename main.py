@@ -25,8 +25,10 @@ import torch
 from model.HandDetectorWrapper import HandDetectorWrapper
 import queue
 from control.threads.HandTrackerThread import HandTrackerThread
+from view.Menu import Menu
+from view.MenuIcon import MenuIcon
 
-vid = cv2.VideoCapture(1)
+vid = cv2.VideoCapture(0)
 
 monitors = get_monitors()
 event_queue = queue.Queue()
@@ -76,7 +78,7 @@ def handle_button_down(event: Event):
     global color # No me gusta usar global, pero no se me ocurre otra forma
     redo_history.clear()
 
-    UIElement = mainFrame.get_element_clicked(event.position)
+    UIElement = mainFrame.get_element_selected(event.position)
 
     if isinstance(UIElement, Canvas):
         desactivate_all_toggleable_ui()
@@ -91,6 +93,13 @@ def handle_button_down(event: Event):
         if new_color is not None:
             color = new_color
 
+def handle_scroll(event: Event):
+    UIElement = mainFrame.get_element_selected(event.position)
+    if isinstance(UIElement, ColorPickerToggleable):
+        UIElement.handle_scroll(event)
+    else:
+        change_draw_size(event.flags)
+
 def desactivate_all_toggleable_ui():
     for toggleable in toggleable_ui_elements:
         toggleable.set_toggle(False)
@@ -98,29 +107,43 @@ def desactivate_all_toggleable_ui():
 def control_mouse_event(event, x, y, flags, param):
     # TODO: Put this in new class MouseHandler
     if event == cv2.EVENT_LBUTTONDOWN:
-        handle_button_down(Event(Point(x, y), ActionType.LEFT_BUTTON_DOWN))
+        handle_button_down(Event(Point(x, y), ActionType.LEFT_BUTTON_DOWN, flags))
 
     if event == cv2.EVENT_RBUTTONDOWN:
-        handle_button_down(Event(Point(x, y), ActionType.RIGHT_BUTTON_DOWN))
+        handle_button_down(Event(Point(x, y), ActionType.RIGHT_BUTTON_DOWN, flags))
 
     if event == cv2.EVENT_MOUSEMOVE and flags == cv2.EVENT_FLAG_LBUTTON:
-        mouse_publisher.notify_click(Event(Point(x, y), ActionType.LEFT_DRAG))
+        mouse_publisher.notify_click(Event(Point(x, y), ActionType.LEFT_DRAG, flags))
 
     if event == cv2.EVENT_MOUSEMOVE and flags == cv2.EVENT_FLAG_RBUTTON:
-        mouse_publisher.notify_click(Event(Point(x, y), ActionType.RIGHT_DRAG))
+        mouse_publisher.notify_click(Event(Point(x, y), ActionType.RIGHT_DRAG, flags))
     
     if event == cv2.EVENT_LBUTTONUP or event == cv2.EVENT_RBUTTONUP:
         mouse_publisher.clear_subscriber()
         redo_history.clear()
 
     if event == cv2.EVENT_MOUSEWHEEL:
-        change_draw_size(flags)
+        handle_scroll(Event(Point(x, y), ActionType.SCROLL, flags))
 
 mainFrame.add_cursor_listener(control_mouse_event)
 mainFrame.add_layer(Canvas(monitors[0].width, monitors[0].height))
-color_picker = ColorPickerToggleable(Point(50, monitors[0].height - 200), 100, 100, ColorPicker(Point(50, monitors[0].height - 200), 400, 200), color=color, toggled_on=False)
+color_picker = ColorPickerToggleable(Point(50, monitors[0].height - 200), 100, 100, ColorPicker(Point(50, monitors[0].height - 300), 400, 200), color=color, toggled_on=False)
 toggleable_ui_elements.append(color_picker)
 mainFrame.add_UI_element(color_picker)
+vertical_menu = Menu(Point(10, 10), Color(150, 150, 150, 200), border_width=2, is_vertical=True, vertical_padding=30, horizontal_padding=20)
+icon_w, icon_h = 100, 100
+pencil_icon = MenuIcon(Point(0, 0), icon_w, icon_h, "./assets/lapiz.webp")
+borrador_icon = MenuIcon(Point(0, 0), icon_w, icon_h, "./assets/borrador.png")
+texto_ocr_icon = MenuIcon(Point(0, 0), icon_w, icon_h, "./assets/texto_ocr.png")
+selector_de_color_icon = MenuIcon(Point(0, 0), icon_w, icon_h, "./assets/selector_de_color.png")
+dibujo_asistido_yolo_icon = MenuIcon(Point(0, 0), icon_w, icon_h, "./assets/dibujo_asistido_yolo.png")
+
+vertical_menu.add_element(pencil_icon)
+vertical_menu.add_element(borrador_icon)
+vertical_menu.add_element(selector_de_color_icon)
+vertical_menu.add_element(texto_ocr_icon)
+vertical_menu.add_element(dibujo_asistido_yolo_icon)
+mainFrame.add_UI_element(vertical_menu)
 
 key_listener = KeyHandler()
 key_listener.add_command_for_key(ExitCommand(), Key.ESC)
