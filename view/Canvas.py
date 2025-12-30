@@ -1,15 +1,17 @@
+from turtle import color
 from view.Clickeable import Clickeable
 from model.ActionType import ActionType
 from control.commands.Command import Command
 from model.Point import Point
 import numpy as np
 
-from model.Color import Color
+from model.Color import Color, COLOR_TRANSPARENT
 
 class Canvas(Clickeable):
-    def __init__(self, width: int, height: int) -> None:
-        self._image = np.full((height, width, 4), 0, dtype=np.uint8)
+    def __init__(self, width: int, height: int, color: Color = COLOR_TRANSPARENT) -> None:
+        self._image = np.full((height, width, 4), color.get_tuple(), dtype=np.uint8)
         self.set_dirty()
+        self.__origin_point = Point(0, 0)
         
     def get_image(self) -> np.ndarray:
         return self._image
@@ -41,7 +43,10 @@ class Canvas(Clickeable):
         return False
     
     def get_origin_point(self) -> Point:
-        return Point(0, 0)
+        return self.__origin_point
+
+    def set_origin_point(self, point: Point) -> None:
+        self.__origin_point = point
     
     def get_width(self) -> int:
         return self._image.shape[1]

@@ -1,6 +1,7 @@
+import math
 from view.Canvas import Canvas
 from model.Point import Point
-from model.Color import Color, BLACK
+from model.Color import COLOR_WHITE, Color, COLOR_BLACK
 from view.Clickeable import Clickeable
 from control.MouseListener import MouseListener
 from screeninfo import get_monitors
@@ -12,8 +13,8 @@ class MainFrame:
         self.__title = "AirCanvas"
         self.__layers: list[Canvas] = []
         self.__UI: list[Clickeable] = []
-        self.__layer_rotation = 0.0
-        self.__layer_center = Point(width // 2, height // 2)
+        self.__rotation_level = 0.0
+        
         self.__width = width
         self.__height = height
         self.__current_layer = 0
@@ -30,8 +31,20 @@ class MainFrame:
     
     def redraw(self) -> None:
         if self.needs_redraw():
-            image_to_draw_on = np.full((self.__height, self.__width, 4), 255, dtype=np.uint8)
+            image_to_draw_on = np.full((self.__height, self.__width, 4), 135, dtype=np.uint8)
+            
+            h = self.__layers[0].get_height()
+            w = self.__layers[0].get_width()
+            x, y = get_monitors()[0].width // 2, get_monitors()[0].height // 2
+            origin_x = x - w // 2
+            origin_y = y - h // 2
+            cv2.rectangle(image_to_draw_on, (origin_x, origin_y), (origin_x + w, origin_y + h), COLOR_WHITE.get_tuple(), cv2.FILLED)
+
             for layer in self.__layers:
+                layer.set_origin_point(Point(
+                    x - layer.get_width() // 2,
+                    y - layer.get_height() // 2
+                ))
                 self.draw_element(image_to_draw_on, layer)
             
             for element in self.__UI:
@@ -161,9 +174,15 @@ class MainFrame:
 
     def get_title(self) -> str:
         return self.__title
+    
+    def get_rotation_level(self) -> float:
+        return self.__rotation_level
+    
+    def set_rotation_level(self, rotation: float) -> None:
+        self.__rotation_level = rotation
 
     def draw_cursor(self, image: np.ndarray) -> None:
-        color = BLACK
+        color = COLOR_BLACK
         if self.__cursor.get_x() < 0 or self.__cursor.get_x() >= self.__width or self.__cursor.get_y() < 0 or self.__cursor.get_y() >= self.__height:
             return
         if self.__cursor_type == 1:
@@ -173,11 +192,38 @@ class MainFrame:
             cv2.line(image, (self.__cursor.get_x() - 10, self.__cursor.get_y()), (self.__cursor.get_x() + 10, self.__cursor.get_y()), color.get_tuple(), 2)
             cv2.line(image, (self.__cursor.get_x(), self.__cursor.get_y() - 10), (self.__cursor.get_x(), self.__cursor.get_y() + 10), color.get_tuple(), 2)
 
+    def transform_point_to_canvas(self, point: Point, rotation: float, canvas_w: int, canvas_h: int, window_w: int, window_h: int) -> Point:
+        cx = (window_w - canvas_w) // 2
+        cy = (window_h - canvas_h) // 2
+
+        # 1. trasladar al origen
+        x = point.get_x() - cx
+        y = point.get_y() - cy
+
+        # 3. quitar rotación
+        angle = -math.radians(rotation)
+        cos_a = math.cos(angle)
+        sin_a = math.sin(angle)
+
+        rx = x * cos_a - y * sin_a
+        ry = x * sin_a + y * cos_a
+
+        # 4. volver al sistema original
+        return Point(int(rx), int(ry))
+    
     def get_element_selected(self, point: Point) -> Clickeable | None:
         for element in self.__UI:
             if element.check_click(point):
                 return element
         
-        if self.__layers[self.__current_layer].check_click(point):
+        canvas_point = self.transform_point_to_canvas(point,
+                                                      self.__rotation_level,
+                                                      self.__layers[0].get_width(),
+                                                      self.__layers[0].get_height(),
+                                                      self.__width,
+                                                      self.__height)
+
+        if self.__layers[self.__current_layer].check_click(canvas_point):
+            print("Layer selected")
             return self.__layers[self.__current_layer]
         return None

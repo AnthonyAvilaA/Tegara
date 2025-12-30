@@ -44,8 +44,33 @@ class CanvasEraseCommand(Command, MouseListener):
             image[pixel.get_y(), pixel.get_x()] = pixel.color.get_list()
         self.__canvas.set_image(image)
 
+    def transform_point_to_canvas(self, point: Point, rotation: float, canvas_w: int, canvas_h: int, window_w: int, window_h: int) -> Point:
+        cx = (window_w - canvas_w) // 2
+        cy = (window_h - canvas_h) // 2
+
+        # 1. trasladar al centro
+        x = point.get_x() - cx
+        y = point.get_y() - cy
+
+        # 3. quitar rotación
+        angle = -math.radians(rotation)
+        cos_a = math.cos(angle)
+        sin_a = math.sin(angle)
+
+        rx = x * cos_a - y * sin_a
+        ry = x * sin_a + y * cos_a
+
+        # 4. volver al sistema original
+        return Point(int(rx), int(ry))
+
     def on_mouse_event(self, event) -> None:
-        new_position: Point = event.position
+        new_position: Point = self.transform_point_to_canvas(event.position,
+                                                             event.layer_rotation,
+                                                             self.__canvas.get_width(),
+                                                             self.__canvas.get_height(),
+                                                             event.windows_size[0],
+                                                             event.windows_size[1])
+        
         __line_points = self.__line_points(new_position)
         image = self.__canvas.get_image()
 

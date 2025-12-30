@@ -65,7 +65,6 @@ class ColorPicker(Clickeable):
         rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
         rgba = np.dstack([rgb, np.full((self.__height, self.__width), 255, dtype=np.uint8)])
         return rgba
-
     
     def handle_scroll(self, event: Event):
         delta = event.flags // 2_000_000

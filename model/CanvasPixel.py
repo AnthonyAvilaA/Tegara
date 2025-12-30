@@ -13,3 +13,6 @@ class CanvasPixel(Point):
     
     def __hash__(self):
         return hash((self.get_x(), self.get_y()))
+    
+    def __repr__(self):
+        return f"CanvasPixel(x={self.get_x()}, y={self.get_y()}, color={self.color})"

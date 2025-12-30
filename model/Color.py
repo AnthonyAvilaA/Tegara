@@ -36,9 +36,10 @@ class Color:
 
 
 
-DEFAULT_COLOR = Color(13, 13, 13)
-BLACK = Color(0, 0, 0)
-WHITE = Color(255, 255, 255)
-BLUE = Color(0, 0, 255)
-RED = Color(255, 0, 0)
-GREEN = Color(0, 255, 0)
+COLOR_DEFAULT_COLOR = Color(13, 13, 13)
+COLOR_BLACK = Color(0, 0, 0)
+COLOR_WHITE = Color(255, 255, 255)
+COLOR_BLUE = Color(0, 0, 255)
+COLOR_RED = Color(255, 0, 0)
+COLOR_GREEN = Color(0, 255, 0)
+COLOR_TRANSPARENT = Color(0, 0, 0, 0)

@@ -14,8 +14,10 @@ class Menu(Clickeable):
         self.is_vertical = is_vertical
         self.vertical_padding = vertical_padding
         self.horizontal_padding = horizontal_padding
+        self.tool_selected = 0
         self.__image: np.ndarray = np.full((1, 1, 4), self.color.get_tuple(), dtype=np.uint8)
         self.__set_image()
+        self.set_dirty()
     
     def get_image(self) -> np.ndarray:
         return self.__image
@@ -53,7 +55,7 @@ class Menu(Clickeable):
         current_x = 0
         current_y = 0
 
-        for element in self.elements:
+        for i, element in enumerate(self.elements):
             elem_image = element.get_image()
             h, w = elem_image.shape[:2]
             
@@ -62,6 +64,9 @@ class Menu(Clickeable):
 
             if (start_x <= relative_x <= start_x + w and
                 start_y <= relative_y <= start_y + h):
+                self.tool_selected = i
+                self.__set_image()
+                self.set_dirty()
                 return element
 
             if self.is_vertical:
@@ -109,13 +114,15 @@ class Menu(Clickeable):
             current_x = 0
             current_y = 0
 
-            for element in self.elements:
+            for i, element in enumerate(self.elements):
                 elem_image = element.get_image()
                 h, w = elem_image.shape[:2]
                 
                 start_x = current_x + self.horizontal_padding // 2
                 start_y = current_y + self.vertical_padding // 2
                 menu_image[start_y:start_y + h, start_x:start_x + w] = elem_image
+                if i == self.tool_selected:
+                    cv2.rectangle(menu_image, (start_x - 2, start_y - 2), (start_x + w + 1, start_y + h + 1), (255, 0, 0, 255), 2)
 
                 if self.is_vertical:
                     current_y += h + self.vertical_padding

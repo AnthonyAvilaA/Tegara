@@ -1,4 +1,6 @@
+import math
 from control.MouseListener import MouseListener
+from control.commands.CanvasColorPickerCommand import CanvasColorPickerCommand
 from control.commands.ExitCommand import ExitCommand
 from control.commands.NoneCommand import NoneCommand
 from control.commands.UndoCommand import UndoCommand
@@ -8,7 +10,7 @@ from view.ToggleableUI import ToggleableUI
 from control.handlers.KeyHandler import KeyHandler
 from definitions.Key import Key
 from view.Canvas import Canvas
-from model.Color import Color, DEFAULT_COLOR
+from model.Color import COLOR_TRANSPARENT, COLOR_WHITE, Color, COLOR_DEFAULT_COLOR
 from view.MainFrame import MainFrame
 from control.MousePublisher import MousePublisher
 from model.Event import Event
@@ -45,7 +47,7 @@ mouse_publisher = MousePublisher()
 undo_history: list[Command] = []
 redo_history: list[Command] = []
 toggleable_ui_elements: list[ToggleableUI] = []
-color = DEFAULT_COLOR  # Default color set to black
+color = COLOR_DEFAULT_COLOR  # Default color set to black
 draw_size = 10  # Default draw size
 tool_status = ToolStatus(Tools.PENCIL)
 
@@ -76,18 +78,34 @@ def start_command(command: Command):
         undo_history.append(command)
         if isinstance(command, MouseListener):
             mouse_publisher.set_subscriber(command)
-            
+
 def handle_button_down(event: Event):
-    global color # No me gusta usar global, pero no se me ocurre otra forma
+    global color, color_picker # No me gusta usar global, pero no se me ocurre otra forma
     redo_history.clear()
 
     UIElement = mainFrame.get_element_selected(event.position)
 
     if isinstance(UIElement, Canvas):
         desactivate_all_toggleable_ui()
-        canvas_handler = CanvasHandler(UIElement, event, color, draw_size, tool_status.get_tool())
+        event = Event(event.position, event.action_type, event.flags, mainFrame.get_rotation_level(), mainFrame.get_window_size())
+        canvas_handler = CanvasHandler(UIElement, event, color, draw_size,
+                                       tool_status.get_tool())
         command = canvas_handler.get_command()
         start_command(command)
+
+        print(f"Tool used: {tool_status.get_tool()}")
+        print(command)
+        if isinstance(command, CanvasColorPickerCommand):
+            new_color = command.get_color_selected()
+            if new_color is not None:
+                print(color)
+                print(color == COLOR_TRANSPARENT)
+                if new_color == COLOR_TRANSPARENT:
+                    new_color = COLOR_WHITE
+                color = new_color
+                color_picker.update_color(color)
+                color_picker.set_dirty()
+                
     elif isinstance(UIElement, ColorPickerToggleable):
         toggle_color_command = ToggleableUIHandler(UIElement, event).get_command()
         toggle_color_command.set_cursor(event.position)
@@ -118,26 +136,29 @@ def desactivate_all_toggleable_ui():
 def control_mouse_event(event, x, y, flags, param):
     # TODO: Put this in new class MouseHandler
     if event == cv2.EVENT_LBUTTONDOWN:
-        handle_button_down(Event(Point(x, y), ActionType.LEFT_BUTTON_DOWN, flags))
+        handle_button_down(Event(Point(x, y), ActionType.LEFT_BUTTON_DOWN, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
 
     if event == cv2.EVENT_RBUTTONDOWN:
-        handle_button_down(Event(Point(x, y), ActionType.RIGHT_BUTTON_DOWN, flags))
+        handle_button_down(Event(Point(x, y), ActionType.RIGHT_BUTTON_DOWN, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
 
     if event == cv2.EVENT_MOUSEMOVE and flags == cv2.EVENT_FLAG_LBUTTON:
-        mouse_publisher.notify_click(Event(Point(x, y), ActionType.LEFT_DRAG, flags))
+        mouse_publisher.notify_click(Event(Point(x, y), ActionType.LEFT_DRAG, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
 
     if event == cv2.EVENT_MOUSEMOVE and flags == cv2.EVENT_FLAG_RBUTTON:
-        mouse_publisher.notify_click(Event(Point(x, y), ActionType.RIGHT_DRAG, flags))
+        mouse_publisher.notify_click(Event(Point(x, y), ActionType.RIGHT_DRAG, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
     
     if event == cv2.EVENT_LBUTTONUP or event == cv2.EVENT_RBUTTONUP:
         mouse_publisher.clear_subscriber()
         redo_history.clear()
 
     if event == cv2.EVENT_MOUSEWHEEL:
-        handle_scroll(Event(Point(x, y), ActionType.SCROLL, flags))
+        handle_scroll(Event(Point(x, y), ActionType.SCROLL, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
 
 mainFrame.add_cursor_listener(control_mouse_event)
-mainFrame.add_layer(Canvas(monitors[0].width, monitors[0].height))
+
+canvas_size_ratio = 0.8
+mainFrame.set_rotation_level = 0.0
+mainFrame.add_layer(Canvas(int(monitors[0].width * canvas_size_ratio), int(monitors[0].height * canvas_size_ratio)))
 color_picker = ColorPickerToggleable(Point(50, monitors[0].height - 200), 100, 100, ColorPicker(Point(50, monitors[0].height - 300), 400, 200), color=color, toggled_on=False)
 toggleable_ui_elements.append(color_picker)
 mainFrame.add_UI_element(color_picker)
@@ -185,10 +206,10 @@ while True:
             mainFrame.set_cursor_position(ev["point"])
 
         elif ev["type"] == "left_down":
-            handle_button_down(Event(ev["point"], ActionType.LEFT_BUTTON_DOWN))
+            handle_button_down(Event(ev["point"], ActionType.LEFT_BUTTON_DOWN, 0, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
 
         elif ev["type"] == "left_drag":
-            mouse_publisher.notify_click(Event(ev["point"], ActionType.LEFT_DRAG))
+            mouse_publisher.notify_click(Event(ev["point"], ActionType.LEFT_DRAG, 0, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
 
         elif ev["type"] == "reset_drag":
             mouse_publisher.clear_subscriber()
