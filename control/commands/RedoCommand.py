@@ -6,10 +6,8 @@ class RedoCommand(Command):
         self.undo_history = undo_history
 
     def execute(self):
-        print(self.redo_history)
         if self.redo_history:
             last_command = self.redo_history.pop()
-            print("Redoing command:", last_command)
             self.undo_history.append(last_command)
             last_command.execute()
 

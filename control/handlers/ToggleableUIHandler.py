@@ -1,5 +1,9 @@
+from view.ColorPickerToggleable import ColorPickerToggleable
+from view.MenuToggleable import MenuToggleable
 from view.ToggleableUI import ToggleableUI
 from control.commands.PickColorCommand import PickColorCommand
+from control.commands.ToggleMenuCommand import ToggleMenuCommand
+from control.commands.Command import Command
 from control.handlers.CommandHandler import CommandHandler
 from model.Event import Event
 
@@ -8,11 +12,17 @@ class ToggleableUIHandler(CommandHandler):
         self.toggleable_ui = toggleable_ui
         self.event = event
     
-    def get_command(self) -> PickColorCommand:
-        match self.event.action_type:
-            case self.event.action_type.LEFT_BUTTON_DOWN:
-                return PickColorCommand(self.toggleable_ui)
-            case self.event.action_type.RIGHT_BUTTON_DOWN:
-                return PickColorCommand(self.toggleable_ui)
-            case _:
-                return None
+    def get_command(self) -> Command:
+        if isinstance(self.toggleable_ui, ColorPickerToggleable):
+            match self.event.action_type:
+                case self.event.action_type.LEFT_BUTTON_DOWN:
+                    return PickColorCommand(self.toggleable_ui)
+                case _:
+                    return None
+        
+        elif isinstance(self.toggleable_ui, MenuToggleable):
+            match self.event.action_type:
+                case self.event.action_type.LEFT_BUTTON_DOWN:
+                    return ToggleMenuCommand(self.toggleable_ui)
+                case _:
+                    return None

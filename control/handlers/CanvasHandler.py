@@ -54,7 +54,6 @@ class CanvasHandler(CommandHandler):
 
                 match self.tool:
                     case Tools.PENCIL:
-                        print("Creating CanvasDrawCommand")
                         return CanvasDrawCommand(canvas=self.canvas,
                                                 color=self.color,
                                                 position=new_position,
@@ -63,7 +62,6 @@ class CanvasHandler(CommandHandler):
                                                 max_points_for_line=80,
                                                 optimization_factor=optimization)
                     case Tools.ERASER:
-                        print("Creating CanvasEraseCommand")
                         return CanvasEraseCommand(canvas=self.canvas,
                                                  position=new_position,
                                                     erase_size=self.draw_size,
@@ -71,12 +69,10 @@ class CanvasHandler(CommandHandler):
                                                     max_points_for_line=80,
                                                     optimization_factor=optimization)
                     case Tools.FILL:
-                        print("Creating CanvasFillCommand")
                         return CanvasFillCommand(canvas=self.canvas,
                                                  position=new_position,
                                                  color=self.color)
                     case Tools.COLOR_PICKER:
-                        print("Creating CanvasColorPickerCommand")
                         return CanvasColorPickerCommand(canvas=self.canvas,
                                                         position=new_position)
 

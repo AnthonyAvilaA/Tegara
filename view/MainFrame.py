@@ -1,4 +1,5 @@
 import math
+from view.ToggleableUI import ToggleableUI
 from view.Canvas import Canvas
 from model.Point import Point
 from model.Color import COLOR_WHITE, Color, COLOR_BLACK
@@ -76,13 +77,14 @@ class MainFrame:
         point: Point = element.get_origin_point()
         h = element.get_height()
         w = element.get_width()
-        
+
         # Asegurar que no se salga
         if point.get_y() + h > self.__height or point.get_x() + w > self.__width:
             print("UI element out of bounds", point, (w, h))
             return
 
         element_img = element.get_image()
+
         if not element.is_opaque():
             # Recorte de zona destino
             roi = image[point.get_y():point.get_y()+h, point.get_x():point.get_x()+w]
@@ -224,6 +226,5 @@ class MainFrame:
                                                       self.__height)
 
         if self.__layers[self.__current_layer].check_click(canvas_point):
-            print("Layer selected")
             return self.__layers[self.__current_layer]
         return None

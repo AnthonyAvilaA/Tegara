@@ -32,7 +32,6 @@ class CanvasFillCommand(Command):
         self.__canvas.set_image(image)
 
     def undo(self):
-        print("Undoing CanvasFillCommand")
         image = self.__canvas.get_image()
         for pixel in self.__changed_pixels:
             image[pixel.get_y(), pixel.get_x()] = pixel.color.get_list()

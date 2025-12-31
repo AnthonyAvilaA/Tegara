@@ -1,10 +1,13 @@
 import math
 from control.MouseListener import MouseListener
+from control.commands.PickColorCommand import PickColorCommand
+from control.commands.ToggleMenuCommand import ToggleMenuCommand
 from control.commands.CanvasColorPickerCommand import CanvasColorPickerCommand
 from control.commands.ExitCommand import ExitCommand
 from control.commands.NoneCommand import NoneCommand
 from control.commands.UndoCommand import UndoCommand
 from control.commands.RedoCommand import RedoCommand
+from view.MenuToggleable import MenuToggleable
 from view.ColorPickerToggleable import ColorPickerToggleable
 from view.ToggleableUI import ToggleableUI
 from control.handlers.KeyHandler import KeyHandler
@@ -84,9 +87,15 @@ def handle_button_down(event: Event):
     redo_history.clear()
 
     UIElement = mainFrame.get_element_selected(event.position)
+    print(f"UI Element clicked: {UIElement}")
+
+    toggleable_element = None
+    if isinstance(UIElement, ToggleableUI):
+        toggleable_element = UIElement
+    desactivate_all_toggleable_ui_unless(toggleable_element)
+    
 
     if isinstance(UIElement, Canvas):
-        desactivate_all_toggleable_ui()
         event = Event(event.position, event.action_type, event.flags, mainFrame.get_rotation_level(), mainFrame.get_window_size())
         canvas_handler = CanvasHandler(UIElement, event, color, draw_size,
                                        tool_status.get_tool())
@@ -94,12 +103,9 @@ def handle_button_down(event: Event):
         start_command(command)
 
         print(f"Tool used: {tool_status.get_tool()}")
-        print(command)
         if isinstance(command, CanvasColorPickerCommand):
             new_color = command.get_color_selected()
             if new_color is not None:
-                print(color)
-                print(color == COLOR_TRANSPARENT)
                 if new_color == COLOR_TRANSPARENT:
                     new_color = COLOR_WHITE
                 color = new_color
@@ -107,20 +113,22 @@ def handle_button_down(event: Event):
                 color_picker.set_dirty()
                 
     elif isinstance(UIElement, ColorPickerToggleable):
-        toggle_color_command = ToggleableUIHandler(UIElement, event).get_command()
+        toggle_color_command: PickColorCommand = ToggleableUIHandler(UIElement, event).get_command()
         toggle_color_command.set_cursor(event.position)
         toggle_color_command.execute()
         new_color = toggle_color_command.get_color_selected()
         if new_color is not None:
             color = new_color
-    elif isinstance(UIElement, Menu):
-        desactivate_all_toggleable_ui()
-        menu_icon: MenuIcon = UIElement.get_icon_clicked(event.position)
+    
+    elif isinstance(UIElement, MenuToggleable):
+        toggle_menu_command: ToggleMenuCommand = ToggleableUIHandler(UIElement, event).get_command()
+        toggle_menu_command.set_cursor(event.position)
+        toggle_menu_command.execute()
+        menu_icon = toggle_menu_command.get_tool_selected()
         if menu_icon is not None:
             tool_type = menu_icon.get_type()
-            tool_status.set_tool(tool_type)
-
-        
+            if tool_type is not None:
+                tool_status.set_tool(tool_type)
 
 def handle_scroll(event: Event):
     UIElement = mainFrame.get_element_selected(event.position)
@@ -129,9 +137,10 @@ def handle_scroll(event: Event):
     else:
         change_draw_size(event.flags)
 
-def desactivate_all_toggleable_ui():
+def desactivate_all_toggleable_ui_unless(unless: ToggleableUI = None):
     for toggleable in toggleable_ui_elements:
-        toggleable.set_toggle(False)
+        if toggleable != unless:
+            toggleable.set_toggle(False)
 
 def control_mouse_event(event, x, y, flags, param):
     # TODO: Put this in new class MouseHandler
@@ -156,13 +165,26 @@ def control_mouse_event(event, x, y, flags, param):
 
 mainFrame.add_cursor_listener(control_mouse_event)
 
-canvas_size_ratio = 0.8
+canvas_size_ratio = 0.5
 mainFrame.set_rotation_level = 0.0
 mainFrame.add_layer(Canvas(int(monitors[0].width * canvas_size_ratio), int(monitors[0].height * canvas_size_ratio)))
+
 color_picker = ColorPickerToggleable(Point(50, monitors[0].height - 200), 100, 100, ColorPicker(Point(50, monitors[0].height - 300), 400, 200), color=color, toggled_on=False)
 toggleable_ui_elements.append(color_picker)
 mainFrame.add_UI_element(color_picker)
-vertical_menu = Menu(Point(10, 10), Color(150, 150, 150, 200), border_width=2, is_vertical=True, vertical_padding=30, horizontal_padding=20)
+vertical_menu = MenuToggleable(
+    Point(60, monitors[0].height // 2 - 25),
+    80, 80,
+    Menu(Point(40, 30),
+         Color(200, 200, 200, 200),
+         border_width=2,
+         is_vertical=True,
+         vertical_padding=30,
+         horizontal_padding=20),
+    toggled_on=False)
+
+toggleable_ui_elements.append(vertical_menu)
+    
 icon_w, icon_h = 100, 100
 pencil_icon = MenuIcon(Point(0, 0), Tools.PENCIL, icon_w, icon_h, "./assets/lapiz.webp")
 borrador_icon = MenuIcon(Point(0, 0), Tools.ERASER, icon_w, icon_h, "./assets/borrador.png")

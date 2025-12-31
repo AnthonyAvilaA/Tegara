@@ -1,5 +1,6 @@
+from view.MenuIcon import MenuIcon
 from view.Clickeable import Clickeable
-from model.Color import Color
+from model.Color import COLOR_BLACK, COLOR_BLUE, Color
 from model.Point import Point
 import numpy as np
 import cv2
@@ -15,7 +16,6 @@ class Menu(Clickeable):
         self.vertical_padding = vertical_padding
         self.horizontal_padding = horizontal_padding
         self.tool_selected = 0
-        self.__image: np.ndarray = np.full((1, 1, 4), self.color.get_tuple(), dtype=np.uint8)
         self.__set_image()
         self.set_dirty()
     
@@ -45,7 +45,7 @@ class Menu(Clickeable):
             return True
         return False
 
-    def get_icon_clicked(self, point: Point) -> Clickeable | None:
+    def get_icon_clicked(self, point: Point) -> MenuIcon | None:
         #if not self.check_click(point): #inferido
         #    return None
 
@@ -88,6 +88,7 @@ class Menu(Clickeable):
         self.set_dirty()
     
     def __set_image(self) -> None:
+            self.__image: np.ndarray = np.full((1, 1, 4), self.color.get_tuple(), dtype=np.uint8)
             total_width = 0
             total_height = 0
             max_width = 0
@@ -121,8 +122,11 @@ class Menu(Clickeable):
                 start_x = current_x + self.horizontal_padding // 2
                 start_y = current_y + self.vertical_padding // 2
                 menu_image[start_y:start_y + h, start_x:start_x + w] = elem_image
+                
+                border_color = COLOR_BLACK.get_tuple()
                 if i == self.tool_selected:
-                    cv2.rectangle(menu_image, (start_x - 2, start_y - 2), (start_x + w + 1, start_y + h + 1), (255, 0, 0, 255), 2)
+                    border_color = COLOR_BLUE.get_tuple()
+                cv2.rectangle(menu_image, (start_x - 2, start_y - 2), (start_x + w + 1, start_y + h + 1), border_color, 2)
 
                 if self.is_vertical:
                     current_y += h + self.vertical_padding

@@ -19,8 +19,11 @@ class PickColorCommand(Command):
         if self.color_picker_toggleable.is_toggled_on():
             new_color = self.color_picker_toggleable.get_color_at(self.point)
             self.color_selected = new_color
+        
         self.color_picker_toggleable.toggle()
-        self.color_picker_toggleable.update_color(self.color_selected)
+        
+        if not self.color_picker_toggleable.is_toggled_on():
+            self.color_picker_toggleable.update_color(self.color_selected)
     
     def undo(self) -> None:
         pass
