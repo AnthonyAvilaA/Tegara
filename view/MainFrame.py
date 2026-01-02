@@ -15,7 +15,7 @@ class MainFrame:
         self.__title = "Tegara"
         self.__layers: list[Canvas] = []
         self.__UI: list[Clickeable] = []
-        self.__rotation_level = 75.0
+        self.__rotation_level = 0
         
         self.__width = width
         self.__height = height
@@ -30,7 +30,7 @@ class MainFrame:
         cv2.setWindowProperty(self.__title, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
         self.redraw()
-    
+
     def redraw(self) -> None:
         if self.needs_redraw():
             image_to_draw_on = np.full((self.__height, self.__width, 4), 135, dtype=np.uint8)
@@ -48,32 +48,11 @@ class MainFrame:
         image_display = self.__image.copy()   
 
         for point in self.__hand_data:
-            cv2.circle(image_display, (point.get_x(), point.get_y()), 5, Color(255, 0, 0).get_tuple(), cv2.FILLED)
+            cv2.circle(image_display, (point.get_x(), point.get_y()), 5, (0, 0, 255, 255), cv2.FILLED)
+        
         if self.__cursor is not None:
             self.draw_cursor(image_display)
 
-        # self.__rotation_level += 0.5
-        
-        # DEBUG: dibujar los puntos clickeables del canvas actual
-        # if len(self.__layers) >= 1:
-        #     self.__rotation_level += 0.5  # Para probar la rotación
-        #     if self.__rotation_level % 7 == 0:
-        #         self.__layers[0].set_dirty()
-        #     width = get_monitors()[0].width
-        #     height = get_monitors()[0].height
-        #     canvas = self.__layers[self.__current_layer]
-        #     for i in range(0, width, 10):
-        #         for j in range(0, height, 10):
-        #             point = Point(i, j)
-        #             point_on_canvas = PointTranslator.window_to_canvas(point, 
-        #                                                     self.__rotation_level,
-        #                                                     canvas)
-        #             if canvas.check_click(point_on_canvas):
-        #                 screen_point = PointTranslator.canvas_to_window(point_on_canvas,
-        #                                                       self.__rotation_level,
-        #                                                       canvas)
-        #                 cv2.circle(image_display, (screen_point.get_x(), screen_point.get_y()), 5, (0, 0, 0, 255), cv2.FILLED)
-                
         cv2.imshow(self.__title, image_display)
 
     def needs_redraw(self) -> bool:
@@ -254,35 +233,25 @@ class MainFrame:
         return new_w, new_h
 
     def render_rotated_canvas(self, canvas: Canvas, rotation_deg: float, target_w: int, target_h: int) -> np.ndarray:
-        angle = math.radians(rotation_deg)
-        cos_a = math.cos(angle)
-        sin_a = math.sin(angle)
-
         src = canvas.get_image()
-        h, w = src.shape[:2]
+        (h, w) = src.shape[:2]
+        center = (w // 2, h // 2)
 
-        dst = np.zeros((target_h, target_w, 4), dtype=np.uint8)
+        # 1. Generar la matriz de rotación (OpenCV usa sentido antihorario por defecto)
+        # Usamos -rotation_deg si quieres que coincida con tu lógica previa
+        M = cv2.getRotationMatrix2D(center, rotation_deg, 1.0)
 
-        cx_src = w / 2
-        cy_src = h / 2
-        cx_dst = target_w / 2
-        cy_dst = target_h / 2
+        # 2. Ajustar la traslación en la matriz para que el centro del canvas 
+        # original coincida con el centro del target (bounding box)
+        M[0, 2] += (target_w / 2) - center[0]
+        M[1, 2] += (target_h / 2) - center[1]
 
-        for y in range(target_h):
-            for x in range(target_w):
-                # Coordenadas centradas en destino
-                dx = x - cx_dst
-                dy = y - cy_dst
-
-                # Rotación inversa
-                sx = dx * cos_a + dy * sin_a + cx_src
-                sy = -dx * sin_a + dy * cos_a + cy_src
-
-                ix = int(sx)
-                iy = int(sy)
-
-                if 0 <= ix < w and 0 <= iy < h:
-                    dst[y, x] = src[iy, ix]
-                # else queda transparente
-
-        return dst
+        # 3. Aplicar la transformación de una sola vez
+        return cv2.warpAffine(
+            src, 
+            M, 
+            (target_w, target_h), 
+            flags=cv2.INTER_LINEAR, 
+            borderMode=cv2.BORDER_CONSTANT, 
+            borderValue=(0, 0, 0, 0) # Transparente fuera de los límites
+        )

@@ -10,3 +10,4 @@ dependencies:
   - torch
   - opencv-python
   - cvzone
+  - mediapipe=0.10.9

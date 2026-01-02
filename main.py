@@ -111,6 +111,7 @@ def handle_button_down(event: Event):
                 color = new_color
                 color_picker.update_color(color)
                 color_picker.set_dirty()
+                redo_history.clear()
                 
     elif isinstance(UIElement, ColorPickerToggleable):
         toggle_color_command: PickColorCommand = ToggleableUIHandler(UIElement, event).get_command()
@@ -143,29 +144,36 @@ def desactivate_all_toggleable_ui_unless(unless: ToggleableUI = None):
             toggleable.set_toggle(False)
 
 def control_mouse_event(event, x, y, flags, param):
-    # TODO: Put this in new class MouseHandler
+    point = Point(x, y)
+
     if event == cv2.EVENT_LBUTTONDOWN:
-        handle_button_down(Event(Point(x, y), ActionType.LEFT_BUTTON_DOWN, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
+        event_queue.put({"type": "left_down", "point": point})
+        # handle_button_down(Event(Point(x, y), ActionType.LEFT_BUTTON_DOWN, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
 
     if event == cv2.EVENT_RBUTTONDOWN:
-        handle_button_down(Event(Point(x, y), ActionType.RIGHT_BUTTON_DOWN, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
+        event_queue.put({"type": "right_down", "point": point})
+        # handle_button_down(Event(Point(x, y), ActionType.RIGHT_BUTTON_DOWN, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
 
     if event == cv2.EVENT_MOUSEMOVE and flags == cv2.EVENT_FLAG_LBUTTON:
-        mouse_publisher.notify_click(Event(Point(x, y), ActionType.LEFT_DRAG, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
+        event_queue.put({"type": "left_drag", "point": point})
+        # mouse_publisher.notify_click(Event(Point(x, y), ActionType.LEFT_DRAG, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
 
     if event == cv2.EVENT_MOUSEMOVE and flags == cv2.EVENT_FLAG_RBUTTON:
-        mouse_publisher.notify_click(Event(Point(x, y), ActionType.RIGHT_DRAG, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
+        event_queue.put({"type": "right_drag", "point": point})
+        # mouse_publisher.notify_click(Event(Point(x, y), ActionType.RIGHT_DRAG, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
     
     if event == cv2.EVENT_LBUTTONUP or event == cv2.EVENT_RBUTTONUP:
-        mouse_publisher.clear_subscriber()
-        redo_history.clear()
+        event_queue.put({"type": "button_up", "point": point})
+        # mouse_publisher.clear_subscriber()
+        # redo_history.clear()
 
     if event == cv2.EVENT_MOUSEWHEEL:
-        handle_scroll(Event(Point(x, y), ActionType.SCROLL, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
+        event_queue.put({"type": "scroll", "point": point, "flags": flags})
+        # handle_scroll(Event(Point(x, y), ActionType.SCROLL, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
 
 mainFrame.add_cursor_listener(control_mouse_event)
 
-canvas_size_ratio = 0.4
+canvas_size_ratio = 0.5
 mainFrame.set_rotation_level = 0.0
 mainFrame.add_layer(Canvas(int(monitors[0].width * canvas_size_ratio), int(monitors[0].height * canvas_size_ratio), COLOR_WHITE))
 
@@ -213,9 +221,9 @@ prev_index_finger_point: dict[str, Point] = {i: Point(400, 300) for i in range(2
 
 
 while True:
-
     # =========== PROCESAR EVENTOS DEL HILO ===========
-    while not event_queue.empty():
+    events_processed = 0
+    while not event_queue.empty() and events_processed < 20:
         ev = event_queue.get()
 
         if ev["type"] == "cursor_update":
@@ -233,13 +241,18 @@ while True:
         elif ev["type"] == "left_drag":
             mouse_publisher.notify_click(Event(ev["point"], ActionType.LEFT_DRAG, 0, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
 
+        elif ev["type"] == "scroll":
+            handle_scroll(Event(ev["point"], ActionType.SCROLL, ev["flags"], mainFrame.get_rotation_level(), mainFrame.get_window_size()))
+
         elif ev["type"] == "reset_drag":
             mouse_publisher.clear_subscriber()
+        
+        events_processed += 1
 
     # =========== REDIBUJAR ===========
     mainFrame.redraw()
 
-    key = cv2.waitKey(1)
+    key = cv2.waitKey(1) & 0xFF
     if not mouse_publisher.has_subscriber() or key == Key.ESC:
         key_listener.get_command(key).execute()
 

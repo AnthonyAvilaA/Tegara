@@ -96,20 +96,16 @@ class CanvasDrawCommand(Command, MouseListener):
         # pero solo lo hacemos para los píxeles que la máscara toca)
         # Optimización: solo guardar si el color es diferente o no está en el set
         indices_y, indices_x = np.where(mask)
-        for i in range(len(indices_y)):
-            actual_y, actual_x = y0 + indices_y[i], x0 + indices_x[i]
-            # Usamos una tupla simple para el set de control de cambios rápidos
-            pos = (actual_x, actual_y)
-            if pos not in self.__changed_coords_set:
-                old_color = Color(*image[actual_y, actual_x])
-                self.__changed_pixels.add(CanvasPixel(Point(actual_x, actual_y), old_color))
-                self.__changed_coords_set.add(pos)
+        for iy, ix in zip(indices_y, indices_x):
+                ay, ax = y0 + iy, x0 + ix
+                if (ax, ay) not in self.__changed_coords_set:
+                    # Solo guardamos lo estrictamente necesario
+                    old_c = image[ay, ax].copy()
+                    self.__changed_pixels.add(CanvasPixel(Point(ax, ay), Color(*old_c)))
+                    self.__changed_coords_set.add((ax, ay))
 
         # 5. Aplicar el color de una sola vez usando la máscara
         roi[mask] = self.__color.get_list()
-
-    def __is_already_changed(self, point: Point) -> bool:
-        return any(p.get_x() == point.get_x() and p.get_y() == point.get_y() for p in self.__changed_pixels)
 
     def __line_points(self, new_position: Point) -> list[Point]:
         points = []
@@ -124,12 +120,15 @@ class CanvasDrawCommand(Command, MouseListener):
         x2, y2 = p2.get_x(), p2.get_y()
         x3, y3 = p3.get_x(), p3.get_y()
 
-
         dist = math.hypot(x2 - x1, y2 - y1)
 
+        dynamic_density = self.__line_density_factor
+        if dist > self.__draw_size:
+            dynamic_density *= 1.5
+
         # Calcular STEPS dinámicos
-        STEPS = int(dist * self.__line_density_factor)
-        STEPS = max(4, min(self.__max_points_for_line, STEPS))  # clamp
+        STEPS = int(dist * dynamic_density)
+        STEPS = max(10, min(self.__max_points_for_line, STEPS))  # clamp
 
         for i in range(STEPS + 1):
             t = i / STEPS
