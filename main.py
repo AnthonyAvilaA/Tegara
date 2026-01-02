@@ -1,4 +1,3 @@
-import math
 from control.MouseListener import MouseListener
 from control.commands.PickColorCommand import PickColorCommand
 from control.commands.ToggleMenuCommand import ToggleMenuCommand
@@ -163,7 +162,7 @@ def control_mouse_event(event, x, y, flags, param):
         # mouse_publisher.notify_click(Event(Point(x, y), ActionType.RIGHT_DRAG, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
     
     if event == cv2.EVENT_LBUTTONUP or event == cv2.EVENT_RBUTTONUP:
-        event_queue.put({"type": "button_up", "point": point})
+        event_queue.put({"type": "reset_drag", "point": point})
         # mouse_publisher.clear_subscriber()
         # redo_history.clear()
 

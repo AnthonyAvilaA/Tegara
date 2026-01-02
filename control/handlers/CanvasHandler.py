@@ -39,14 +39,16 @@ class CanvasHandler(CommandHandler):
                                                 draw_size=self.draw_size,
                                                 line_density_factor=line_density,
                                                 max_points_for_line=80,
-                                                optimization_factor=optimization)
+                                                optimization_factor=optimization,
+                                                smoothing_factor=0.65)
                     case Tools.ERASER:
                         return CanvasEraseCommand(canvas=self.canvas,
                                                  position=new_position,
                                                     erase_size=self.draw_size,
                                                     line_density_factor=line_density,
                                                     max_points_for_line=80,
-                                                    optimization_factor=optimization)
+                                                    optimization_factor=optimization,
+                                                    smoothing_factor=0.65)
                     case Tools.FILL:
                         return CanvasFillCommand(canvas=self.canvas,
                                                  position=new_position,

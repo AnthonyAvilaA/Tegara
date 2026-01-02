@@ -9,7 +9,7 @@ from model.CanvasPixel import CanvasPixel
 from control.PointTranslator import PointTranslator
 
 class CanvasEraseCommand(Command, MouseListener):
-    def __init__(self, canvas: Canvas, position: Point, erase_size: int, line_density_factor = 0.4, max_points_for_line: int = 60, optimization_factor: float = 3) -> None:
+    def __init__(self, canvas: Canvas, position: Point, erase_size: int, line_density_factor = 0.4, max_points_for_line: int = 60, optimization_factor: float = 3, smoothing_factor: float = 0.15) -> None:
         self.__canvas: Canvas = canvas
         self.__position: Point = position
         self.__prev_position: list[Point] = [position]
@@ -19,6 +19,8 @@ class CanvasEraseCommand(Command, MouseListener):
         self.__optimization_factor = optimization_factor
         self.__max_points_for_line = max_points_for_line
         self.__line_density_factor = line_density_factor
+        self.__smooth_position = position
+        self.__smoothing_factor = smoothing_factor
         self.__white_color: Color = Color(255, 255, 255)  # Color de borrado (blanco)
     
     def execute(self):
@@ -45,11 +47,20 @@ class CanvasEraseCommand(Command, MouseListener):
         self.__canvas.set_image(image)
 
     def on_mouse_event(self, event) -> None:
-        new_position: Point = PointTranslator.window_to_canvas(event.position,
-                                                             event.layer_rotation,
-                                                             self.__canvas)
+        target_position: Point = PointTranslator.window_to_canvas(
+            event.position,
+            event.layer_rotation,
+            self.__canvas
+        )
+        new_smooth_x = self.__smooth_position.get_x() + \
+                    (target_position.get_x() - self.__smooth_position.get_x()) * self.__smoothing_factor
+        new_smooth_y = self.__smooth_position.get_y() + \
+                    (target_position.get_y() - self.__smooth_position.get_y()) * self.__smoothing_factor
         
-        __line_points = self.__line_points(new_position)
+        new_smooth_pos = Point(int(new_smooth_x), int(new_smooth_y))
+        # 3. Generar los puntos de la curva usando la posición suavizada
+        __line_points = self.__line_points(new_smooth_pos)
+        
         image = self.__canvas.get_image()
 
         for point in __line_points:
@@ -63,7 +74,9 @@ class CanvasEraseCommand(Command, MouseListener):
         self.__prev_position.append(self.__position)
         if len(self.__prev_position) > 5:
             self.__prev_position.pop(0)
-        self.__position = new_position
+        self.__position = new_smooth_pos
+
+        self.__smooth_position = Point(new_smooth_x, new_smooth_y) # Guardar con decimales para precisión
 
     def on_mouse_release(self) -> None:
         image = self.__canvas.get_image()

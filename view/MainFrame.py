@@ -52,7 +52,7 @@ class MainFrame:
         
         if self.__cursor is not None:
             self.draw_cursor(image_display)
-
+        
         cv2.imshow(self.__title, image_display)
 
     def needs_redraw(self) -> bool:
