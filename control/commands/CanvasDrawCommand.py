@@ -1,5 +1,6 @@
 import math
 from numpy import ndarray
+import numpy as np
 from control.commands.Command import Command
 from control.MouseListener import MouseListener
 from model.Point import Point
@@ -7,6 +8,7 @@ from model.Color import Color
 from view.Canvas import Canvas
 from model.CanvasPixel import CanvasPixel 
 from model.Event import Event
+from control.PointTranslator import PointTranslator
 
 class CanvasDrawCommand(Command, MouseListener):
     def __init__(self, canvas: Canvas, color: Color, position: Point, draw_size: int, line_density_factor = 0.4, max_points_for_line: int = 60, optimization_factor: float = 3) -> None:
@@ -20,6 +22,7 @@ class CanvasDrawCommand(Command, MouseListener):
         self.__optimization_factor = optimization_factor
         self.__max_points_for_line = max_points_for_line
         self.__line_density_factor = line_density_factor
+        self.__changed_coords_set = set()
     
     def execute(self):
         if self.__changed_pixels:
@@ -44,32 +47,11 @@ class CanvasDrawCommand(Command, MouseListener):
             image[pixel.get_y(), pixel.get_x()] = pixel.color.get_list()
         self.__canvas.set_image(image)
 
-    def transform_point_to_canvas(self, point: Point, rotation: float, canvas_w: int, canvas_h: int, window_w: int, window_h: int) -> Point:
-        cx = (window_w - canvas_w) // 2
-        cy = (window_h - canvas_h) // 2
-
-        # 1. trasladar al centro
-        x = point.get_x() - cx
-        y = point.get_y() - cy
-
-        # 3. quitar rotación
-        angle = -math.radians(rotation)
-        cos_a = math.cos(angle)
-        sin_a = math.sin(angle)
-
-        rx = x * cos_a - y * sin_a
-        ry = x * sin_a + y * cos_a
-
-        # 4. volver al sistema original
-        return Point(int(rx), int(ry))
-
     def on_mouse_event(self, event: Event) -> None:
-        new_position: Point = self.transform_point_to_canvas(event.position,
+        new_position: Point = PointTranslator.window_to_canvas(event.position,
                                                              event.layer_rotation,
-                                                             self.__canvas.get_width(),
-                                                             self.__canvas.get_height(),
-                                                             event.windows_size[0],
-                                                             event.windows_size[1])
+                                                             self.__canvas)
+        
         __line_points = self.__line_points(new_position)
         image = self.__canvas.get_image()
 
@@ -91,30 +73,43 @@ class CanvasDrawCommand(Command, MouseListener):
         self.__canvas.set_image(image)
 
     def draw_point(self, point: Point, image: ndarray) -> None:
-        canvas_width = self.__canvas.get_width()
-        canvas_height = self.__canvas.get_height()
-        target_color_list = self.__color.get_list()
-        radius = self.__draw_size // 2
-        radius_sq = radius * radius
-        
-        for dx in range(-radius, radius + 1):
-            for dy in range(-radius, radius + 1):
-                
-                if dx*dx + dy*dy <= radius_sq:
-                    offset = Point(dx, dy)
-                    new_point = point.addition(offset)
-                    x, y = new_point.get_x(), new_point.get_y()
-                    
-                    if self.__is_point_in_canvas(new_point):
-                        continue
-                    
-                    if 0 <= x < canvas_width and 0 <= y < canvas_height:    
-                        original_color = self.__canvas.get_color_at(new_point)
-                        self.__changed_pixels.add(CanvasPixel(new_point, original_color)) 
-                        image[y, x] = target_color_list
+        canvas_w = self.__canvas.get_width()
+        canvas_h = self.__canvas.get_height()
+        r = self.__draw_size // 2
+        px, py = point.get_x(), point.get_y()
 
-    def __is_point_in_canvas(self, point: Point) -> bool:
-        return CanvasPixel(point, self.__color) in self.__changed_pixels                        
+        # 1. Definir los límites del cuadro del pincel (bounding box)
+        x0, x1 = max(0, px - r), min(canvas_w, px + r + 1)
+        y0, y1 = max(0, py - r), min(canvas_h, py + r + 1)
+
+        if x0 >= x1 or y0 >= y1: return
+
+        # 2. Crear una malla de coordenadas local para el círculo
+        # Esto genera una máscara booleana circular
+        yy, xx = np.ogrid[y0 - py : y1 - py, x0 - px : x1 - px]
+        mask = xx**2 + yy**2 <= r**2
+
+        # 3. Obtener el área de la imagen que vamos a afectar
+        roi = image[y0:y1, x0:x1]
+
+        # 4. Guardar píxeles para Undo (esto sigue siendo algo lento, 
+        # pero solo lo hacemos para los píxeles que la máscara toca)
+        # Optimización: solo guardar si el color es diferente o no está en el set
+        indices_y, indices_x = np.where(mask)
+        for i in range(len(indices_y)):
+            actual_y, actual_x = y0 + indices_y[i], x0 + indices_x[i]
+            # Usamos una tupla simple para el set de control de cambios rápidos
+            pos = (actual_x, actual_y)
+            if pos not in self.__changed_coords_set:
+                old_color = Color(*image[actual_y, actual_x])
+                self.__changed_pixels.add(CanvasPixel(Point(actual_x, actual_y), old_color))
+                self.__changed_coords_set.add(pos)
+
+        # 5. Aplicar el color de una sola vez usando la máscara
+        roi[mask] = self.__color.get_list()
+
+    def __is_already_changed(self, point: Point) -> bool:
+        return any(p.get_x() == point.get_x() and p.get_y() == point.get_y() for p in self.__changed_pixels)
 
     def __line_points(self, new_position: Point) -> list[Point]:
         points = []

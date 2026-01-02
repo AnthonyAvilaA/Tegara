@@ -8,13 +8,14 @@ from control.MouseListener import MouseListener
 from screeninfo import get_monitors
 import numpy as np
 import cv2
+from control.PointTranslator import PointTranslator
 
 class MainFrame:
     def __init__(self, width: int = 800, height: int = 600) -> None:
-        self.__title = "AirCanvas"
+        self.__title = "Tegara"
         self.__layers: list[Canvas] = []
         self.__UI: list[Clickeable] = []
-        self.__rotation_level = 0.0
+        self.__rotation_level = 75.0
         
         self.__width = width
         self.__height = height
@@ -34,18 +35,9 @@ class MainFrame:
         if self.needs_redraw():
             image_to_draw_on = np.full((self.__height, self.__width, 4), 135, dtype=np.uint8)
             
-            h = self.__layers[0].get_height()
-            w = self.__layers[0].get_width()
-            x, y = get_monitors()[0].width // 2, get_monitors()[0].height // 2
-            origin_x = x - w // 2
-            origin_y = y - h // 2
-            cv2.rectangle(image_to_draw_on, (origin_x, origin_y), (origin_x + w, origin_y + h), COLOR_WHITE.get_tuple(), cv2.FILLED)
-
+            x, y = self.__width // 2, self.__height // 2
             for layer in self.__layers:
-                layer.set_origin_point(Point(
-                    x - layer.get_width() // 2,
-                    y - layer.get_height() // 2
-                ))
+                layer.set_origin_point(Point(x, y))
                 self.draw_element(image_to_draw_on, layer)
             
             for element in self.__UI:
@@ -59,7 +51,29 @@ class MainFrame:
             cv2.circle(image_display, (point.get_x(), point.get_y()), 5, Color(255, 0, 0).get_tuple(), cv2.FILLED)
         if self.__cursor is not None:
             self.draw_cursor(image_display)
-            
+
+        # self.__rotation_level += 0.5
+        
+        # DEBUG: dibujar los puntos clickeables del canvas actual
+        # if len(self.__layers) >= 1:
+        #     self.__rotation_level += 0.5  # Para probar la rotación
+        #     if self.__rotation_level % 7 == 0:
+        #         self.__layers[0].set_dirty()
+        #     width = get_monitors()[0].width
+        #     height = get_monitors()[0].height
+        #     canvas = self.__layers[self.__current_layer]
+        #     for i in range(0, width, 10):
+        #         for j in range(0, height, 10):
+        #             point = Point(i, j)
+        #             point_on_canvas = PointTranslator.window_to_canvas(point, 
+        #                                                     self.__rotation_level,
+        #                                                     canvas)
+        #             if canvas.check_click(point_on_canvas):
+        #                 screen_point = PointTranslator.canvas_to_window(point_on_canvas,
+        #                                                       self.__rotation_level,
+        #                                                       canvas)
+        #                 cv2.circle(image_display, (screen_point.get_x(), screen_point.get_y()), 5, (0, 0, 0, 255), cv2.FILLED)
+                
         cv2.imshow(self.__title, image_display)
 
     def needs_redraw(self) -> bool:
@@ -70,31 +84,56 @@ class MainFrame:
         for element in self.__layers:
             if element.is_dirty():
                 element.clear_dirty()
-                return True            
+                return True
         return False
+    
     
     def draw_element(self, image: np.ndarray, element: Clickeable):
         point: Point = element.get_origin_point()
-        h = element.get_height()
-        w = element.get_width()
 
-        # Asegurar que no se salga
-        if point.get_y() + h > self.__height or point.get_x() + w > self.__width:
-            print("UI element out of bounds", point, (w, h))
+        if isinstance(element, Canvas):
+            angle = math.radians(self.__rotation_level)
+
+            bb_w, bb_h = self.rotated_bounding_box(element.get_width(), element.get_height(), angle)
+            rotated = self.render_rotated_canvas(element, self.__rotation_level, bb_w, bb_h)
+
+            # Recorte seguro a la ventana
+            cx = point.get_x() - bb_w // 2
+            cy = point.get_y() - bb_h // 2
+
+            x0 = max(cx, 0)
+            y0 = max(cy, 0)
+            x1 = min(cx + bb_w, self.__width)
+            y1 = min(cy + bb_h, self.__height)
+
+
+            if x0 >= x1 or y0 >= y1:
+                return
+
+            roi = image[y0:y1, x0:x1]
+
+            rx0 = x0 - cx
+            ry0 = y0 - cy
+            rx1 = rx0 + (x1 - x0)
+            ry1 = ry0 + (y1 - y0)
+
+            blended = self.alpha_blend(roi, rotated[ry0:ry1, rx0:rx1])
+
+            image[y0:y1, x0:x1] = blended
             return
 
+        # --- Caso normal ---
+        h = element.get_height()
+        w = element.get_width()
         element_img = element.get_image()
 
         if not element.is_opaque():
-            # Recorte de zona destino
             roi = image[point.get_y():point.get_y()+h, point.get_x():point.get_x()+w]
-            # Alpha blend
             element_img = self.alpha_blend(roi, element_img)
 
-        # Copiar resultado
         image[point.get_y():point.get_y()+h, point.get_x():point.get_x()+w] = element_img
-    
-    def alpha_blend(self, bg, fg):
+
+    def alpha_blend(self, bg: np.ndarray, fg: np.ndarray) -> np.ndarray:
         # 1. Extract alpha channel and expand dimensions for broadcasting
         # Shape becomes (H, W, 1) so it can multiply against (H, W, 3)
         alpha = fg[..., 3].astype(np.uint16)[..., None]
@@ -194,37 +233,56 @@ class MainFrame:
             cv2.line(image, (self.__cursor.get_x() - 10, self.__cursor.get_y()), (self.__cursor.get_x() + 10, self.__cursor.get_y()), color.get_tuple(), 2)
             cv2.line(image, (self.__cursor.get_x(), self.__cursor.get_y() - 10), (self.__cursor.get_x(), self.__cursor.get_y() + 10), color.get_tuple(), 2)
 
-    def transform_point_to_canvas(self, point: Point, rotation: float, canvas_w: int, canvas_h: int, window_w: int, window_h: int) -> Point:
-        cx = (window_w - canvas_w) // 2
-        cy = (window_h - canvas_h) // 2
-
-        # 1. trasladar al origen
-        x = point.get_x() - cx
-        y = point.get_y() - cy
-
-        # 3. quitar rotación
-        angle = -math.radians(rotation)
-        cos_a = math.cos(angle)
-        sin_a = math.sin(angle)
-
-        rx = x * cos_a - y * sin_a
-        ry = x * sin_a + y * cos_a
-
-        # 4. volver al sistema original
-        return Point(int(rx), int(ry))
-    
     def get_element_selected(self, point: Point) -> Clickeable | None:
         for element in self.__UI:
             if element.check_click(point):
                 return element
         
-        canvas_point = self.transform_point_to_canvas(point,
-                                                      self.__rotation_level,
-                                                      self.__layers[0].get_width(),
-                                                      self.__layers[0].get_height(),
-                                                      self.__width,
-                                                      self.__height)
+        canvas_point = PointTranslator.window_to_canvas(point, self.__rotation_level, self.__layers[self.__current_layer])
 
         if self.__layers[self.__current_layer].check_click(canvas_point):
             return self.__layers[self.__current_layer]
         return None
+    
+    def rotated_bounding_box(self, w: int, h: int, angle_rad: float) -> tuple[int, int]:
+        cos_a = abs(math.cos(angle_rad))
+        sin_a = abs(math.sin(angle_rad))
+
+        new_w = int(w * cos_a + h * sin_a)
+        new_h = int(w * sin_a + h * cos_a)
+
+        return new_w, new_h
+
+    def render_rotated_canvas(self, canvas: Canvas, rotation_deg: float, target_w: int, target_h: int) -> np.ndarray:
+        angle = math.radians(rotation_deg)
+        cos_a = math.cos(angle)
+        sin_a = math.sin(angle)
+
+        src = canvas.get_image()
+        h, w = src.shape[:2]
+
+        dst = np.zeros((target_h, target_w, 4), dtype=np.uint8)
+
+        cx_src = w / 2
+        cy_src = h / 2
+        cx_dst = target_w / 2
+        cy_dst = target_h / 2
+
+        for y in range(target_h):
+            for x in range(target_w):
+                # Coordenadas centradas en destino
+                dx = x - cx_dst
+                dy = y - cy_dst
+
+                # Rotación inversa
+                sx = dx * cos_a + dy * sin_a + cx_src
+                sy = -dx * sin_a + dy * cos_a + cy_src
+
+                ix = int(sx)
+                iy = int(sy)
+
+                if 0 <= ix < w and 0 <= iy < h:
+                    dst[y, x] = src[iy, ix]
+                # else queda transparente
+
+        return dst
