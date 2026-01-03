@@ -10,7 +10,7 @@ from view.MenuToggleable import MenuToggleable
 from view.ColorPickerToggleable import ColorPickerToggleable
 from view.ToggleableUI import ToggleableUI
 from control.handlers.KeyHandler import KeyHandler
-from definitions.key import Key
+from definitions.Key import Key
 from view.Canvas import Canvas
 from model.Color import COLOR_TRANSPARENT, COLOR_WHITE, Color, COLOR_DEFAULT_COLOR
 from view.MainFrame import MainFrame
@@ -31,7 +31,7 @@ import queue
 from control.threads.HandTrackerThread import HandTrackerThread
 from view.Menu import Menu
 from view.MenuIcon import MenuIcon
-from definitions.tools import Tools
+from definitions.Tools import Tools
 from control.ToolStatus import ToolStatus
 
 vid = cv2.VideoCapture(0)
@@ -97,6 +97,7 @@ def handle_button_down(event: Event):
     
 
     if isinstance(UIElement, Canvas):
+        redo_history.clear()
         event = Event(event.position, event.action_type, event.flags, mainFrame.get_rotation_level(), mainFrame.get_window_size())
         canvas_handler = CanvasHandler(UIElement, event, color, draw_size,
                                        tool_status.get_tool())
@@ -144,18 +145,23 @@ def desactivate_all_toggleable_ui_unless(unless: ToggleableUI = None):
             toggleable.set_toggle(False)
 
 def control_mouse_event(event, x, y, flags, param):
+    point = Point(x, y)
     # TODO: Put this in new class MouseHandler
     if event == cv2.EVENT_LBUTTONDOWN:
-        handle_button_down(Event(Point(x, y), ActionType.LEFT_BUTTON_DOWN, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
+        event_queue.put({"type": "left_down", "point": Point(x, y)})
+        # handle_button_down(Event(Point(x, y), ActionType.LEFT_BUTTON_DOWN, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
 
     if event == cv2.EVENT_RBUTTONDOWN:
-        handle_button_down(Event(Point(x, y), ActionType.RIGHT_BUTTON_DOWN, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
+        event_queue.put({"type": "right_down", "point": Point(x, y)})
+        # handle_button_down(Event(Point(x, y), ActionType.RIGHT_BUTTON_DOWN, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
 
     if event == cv2.EVENT_MOUSEMOVE and flags == cv2.EVENT_FLAG_LBUTTON:
-        mouse_publisher.notify_click(Event(Point(x, y), ActionType.LEFT_DRAG, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
+        event_queue.put({"type": "left_drag", "point": Point(x, y)})
+        # mouse_publisher.notify_click(Event(Point(x, y), ActionType.LEFT_DRAG, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
 
     if event == cv2.EVENT_MOUSEMOVE and flags == cv2.EVENT_FLAG_RBUTTON:
-        mouse_publisher.notify_click(Event(Point(x, y), ActionType.RIGHT_DRAG, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
+        event_queue.put({"type": "right_drag", "point": Point(x, y)})
+        # mouse_publisher.notify_click(Event(Point(x, y), ActionType.RIGHT_DRAG, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
     
     if event == cv2.EVENT_LBUTTONUP or event == cv2.EVENT_RBUTTONUP:
         event_queue.put({"type": "reset_drag", "point": point})
@@ -167,7 +173,7 @@ def control_mouse_event(event, x, y, flags, param):
 
 mainFrame.add_cursor_listener(control_mouse_event)
 
-canvas_size_ratio = 0.8
+canvas_size_ratio = 0.6
 mainFrame.set_rotation_level = 0.0
 mainFrame.add_layer(Canvas(int(monitors[0].width * canvas_size_ratio), int(monitors[0].height * canvas_size_ratio), COLOR_WHITE))
 
@@ -234,6 +240,9 @@ while True:
 
         elif ev["type"] == "left_drag":
             mouse_publisher.notify_click(Event(ev["point"], ActionType.LEFT_DRAG, 0, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
+
+        elif ev["type"] == "scroll":
+            handle_scroll(Event(ev["point"], ActionType.SCROLL, ev["flags"], mainFrame.get_rotation_level(), mainFrame.get_window_size()))
 
         elif ev["type"] == "reset_drag":
             mouse_publisher.clear_subscriber()

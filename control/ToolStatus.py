@@ -1,4 +1,4 @@
-from definitions.tools import Tools
+from definitions.Tools import Tools
 
 class ToolStatus:
     def __init__(self, tool: Tools = Tools.PENCIL) -> None:

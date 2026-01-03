@@ -1,6 +1,6 @@
 from control.commands.Command import Command
 from control.commands.KeyDebugCommand import KeyDebugCommand
-from definitions.key import Key
+from definitions.Key import Key
 from control.handlers.CommandHandler import CommandHandler
 
 class KeyHandler(CommandHandler):

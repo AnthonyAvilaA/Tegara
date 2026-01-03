@@ -10,7 +10,7 @@ from view.Canvas import Canvas
 from model.Event import Event
 from model.Color import Color
 from model.ActionType import ActionType
-from definitions.tools import Tools
+from definitions.Tools import Tools
 from control.PointTranslator import PointTranslator
 import math
 
