@@ -50,7 +50,8 @@ class CanvasEraseCommand(Command, MouseListener):
         target_position: Point = PointTranslator.window_to_canvas(
             event.position,
             event.layer_rotation,
-            self.__canvas
+            self.__canvas,
+            event.layer_zoom_level
         )
         new_smooth_x = self.__smooth_position.get_x() + \
                     (target_position.get_x() - self.__smooth_position.get_x()) * self.__smoothing_factor

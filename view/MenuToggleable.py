@@ -3,6 +3,7 @@ from view.MenuIcon import MenuIcon
 from view.ToggleableUI import ToggleableUI
 from model.Point import Point
 from model.Color import COLOR_WHITE, Color
+from definitions.Tools import Tools
 import numpy as np
 import cv2
 
@@ -44,3 +45,21 @@ class MenuToggleable(ToggleableUI[Menu]):
         """Agrega un icono al menú subyacente"""
         element: Menu = super().get_element()
         element.add_element(icon)
+    
+    def set_tool(self, tool: Tools) -> None:
+        """Establece la herramienta activa en el menú subyacente"""
+        element: Menu = super().get_element()
+        element.set_tool(tool.value)
+
+    def get_tool(self) -> Tools:
+        """Obtiene la herramienta activa del menú subyacente"""
+        element: Menu = super().get_element()
+        tool_index = element.get_tool()  # Acceso al atributo privado
+        if tool_index == 0:
+            return Tools.PENCIL
+        elif tool_index == 1:
+            return Tools.ERASER
+        elif tool_index == 2:
+            return Tools.FILL
+        
+        return None

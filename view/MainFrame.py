@@ -23,6 +23,7 @@ class MainFrame:
         self.__image = np.full((height, width, 4), 255, dtype=np.uint8)
         self.__cursor: Point = None
         self.__hand_data: list[Point] = []
+        self.__zoom_level = 1.0
         self.__cursor_type = 0  # 0: drawing, 1: pointer
         cv2.namedWindow(self.__title, cv2.WINDOW_AUTOSIZE | cv2.WINDOW_GUI_NORMAL | cv2.WINDOW_NORMAL)
         cv2.resizeWindow(self.__title, width, height)
@@ -188,6 +189,9 @@ class MainFrame:
     
     def set_hand(self, hand_data: list[Point]) -> None:
         self.__hand_data = hand_data
+    
+    def get_hand_points(self) -> list[Point]:
+        return list(self.__hand_data)
 
     def get_title(self) -> str:
         return self.__title
@@ -217,7 +221,7 @@ class MainFrame:
             if element.check_click(point):
                 return element
         
-        canvas_point = PointTranslator.window_to_canvas(point, self.__rotation_level, self.__layers[self.__current_layer])
+        canvas_point = PointTranslator.window_to_canvas(point, self.__rotation_level, self.__layers[self.__current_layer], self.__zoom_level)
 
         if self.__layers[self.__current_layer].check_click(canvas_point):
             return self.__layers[self.__current_layer]
@@ -227,9 +231,12 @@ class MainFrame:
         cos_a = abs(math.cos(angle_rad))
         sin_a = abs(math.sin(angle_rad))
 
-        new_w = int(w * cos_a + h * sin_a)
-        new_h = int(w * sin_a + h * cos_a)
+        base_w = w * self.__zoom_level
+        base_h = h * self.__zoom_level
 
+        new_w = int(base_w * cos_a + base_h * sin_a)
+        new_h = int(base_w * sin_a + base_h * cos_a)
+        
         return new_w, new_h
 
     def render_rotated_canvas(self, canvas: Canvas, rotation_deg: float, target_w: int, target_h: int) -> np.ndarray:
@@ -239,7 +246,7 @@ class MainFrame:
 
         # 1. Generar la matriz de rotación (OpenCV usa sentido antihorario por defecto)
         # Usamos -rotation_deg si quieres que coincida con tu lógica previa
-        M = cv2.getRotationMatrix2D(center, rotation_deg, 1.0)
+        M = cv2.getRotationMatrix2D(center, rotation_deg, self.__zoom_level)
 
         # 2. Ajustar la traslación en la matriz para que el centro del canvas 
         # original coincida con el centro del target (bounding box)
@@ -255,3 +262,18 @@ class MainFrame:
             borderMode=cv2.BORDER_CONSTANT, 
             borderValue=(0, 0, 0, 0) # Transparente fuera de los límites
         )
+
+    def get_zoom_level(self) -> float:
+        return self.__zoom_level
+
+    def zoom_in(self, factor: float = 0.1) -> None:
+        self.__zoom_level += factor
+        if self.__zoom_level > 5.0:
+            self.__zoom_level = 5.0
+        self.__layers[self.__current_layer].set_dirty()
+    
+    def zoom_out(self, factor: float = 0.1) -> None:
+        self.__zoom_level -= factor
+        if self.__zoom_level < 0.1:
+            self.__zoom_level = 0.1
+        self.__layers[self.__current_layer].set_dirty()

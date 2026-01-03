@@ -33,6 +33,7 @@ from view.Menu import Menu
 from view.MenuIcon import MenuIcon
 from definitions.Tools import Tools
 from control.ToolStatus import ToolStatus
+from definitions.HandsGestures import HandsGestures
 
 vid = cv2.VideoCapture(0)
 
@@ -41,7 +42,7 @@ event_queue = queue.Queue()
 
 mainFrame = MainFrame(monitors[0].width, monitors[0].height)
 model = SmallClassifier()
-model.load_state_dict(torch.load("modelo_pointing1.pth"))
+model.load_state_dict(torch.load("modelo_pointing_v2.pth"))
 model.eval()
 
 hand_detector = HandDetectorWrapper(maxHands=1, detectionCon=0.2, minTrackCon=0.1)
@@ -98,7 +99,7 @@ def handle_button_down(event: Event):
 
     if isinstance(UIElement, Canvas):
         redo_history.clear()
-        event = Event(event.position, event.action_type, event.flags, mainFrame.get_rotation_level(), mainFrame.get_window_size())
+        event = Event(event.position, event.action_type, event.flags, mainFrame.get_rotation_level(), mainFrame.get_window_size(), mainFrame.get_zoom_level())
         canvas_handler = CanvasHandler(UIElement, event, color, draw_size,
                                        tool_status.get_tool())
         command = canvas_handler.get_command()
@@ -169,7 +170,70 @@ def control_mouse_event(event, x, y, flags, param):
         # redo_history.clear()
 
     if event == cv2.EVENT_MOUSEWHEEL:
-        handle_scroll(Event(Point(x, y), ActionType.SCROLL, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
+        handle_scroll(Event(Point(x, y), ActionType.SCROLL, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size(), mainFrame.get_zoom_level()))
+
+def handle_gesture(gesture: HandsGestures, menu: MenuToggleable = None):
+    global prev_hand_size
+    
+    gesture_tool = None
+    match gesture:
+        case HandsGestures.POINTING:
+            gesture_tool = Tools.PENCIL
+        case HandsGestures.ERASE:
+            gesture_tool = Tools.ERASER
+        case HandsGestures.FILL:
+            gesture_tool = Tools.FILL
+        case _:
+            gesture_tool = Tools.NONE
+
+    print(f"Gesture detected: {gesture}, changing tool to {gesture_tool}")
+
+    if gesture_tool == tool_status.get_tool() and gesture_tool != Tools.NONE:
+        return
+
+    match gesture:
+        case HandsGestures.POINTING:
+            tool_status.set_tool(Tools.PENCIL)
+            menu.set_tool(Tools.PENCIL)
+        case HandsGestures.ERASE:
+            tool_status.set_tool(Tools.ERASER)
+            menu.set_tool(Tools.ERASER)
+        case HandsGestures.ZOOM:
+            hand = mainFrame.get_hand_points()
+            # conseguir el recuadro de la mano
+            point = hand.pop()
+            x_left, x_right, y_top, y_bottom = point.get_x(), point.get_x(), point.get_y(), point.get_y()
+            for p in hand:
+                if p.get_x() < x_left:
+                    x_left = p.get_x()
+                if p.get_x() > x_right:
+                    x_right = p.get_x()
+                if p.get_y() < y_top:
+                    y_top = p.get_y()
+                if p.get_y() > y_bottom:
+                    y_bottom = p.get_y()
+            
+            hand_size = (x_right - x_left) * (y_bottom - y_top)
+            if prev_hand_size is not None:
+                if hand_size > prev_hand_size * 1.1:
+                    mainFrame.zoom_in()
+                elif hand_size < prev_hand_size * 0.9:
+                    mainFrame.zoom_out()
+            prev_hand_size = hand_size
+            
+        case HandsGestures.FILL:
+            tool_status.set_tool(Tools.FILL)
+            menu.set_tool(Tools.FILL)
+        case HandsGestures.ROTATE:
+            pass
+        case HandsGestures.SCROLL:
+            pass
+        case HandsGestures.IDLE:
+            prev_hand_size = None
+        case _:
+            print("No recognized gesture")
+
+prev_hand_size = None
 
 mainFrame.add_cursor_listener(control_mouse_event)
 
@@ -226,7 +290,10 @@ while True:
     while not event_queue.empty():
         ev = event_queue.get()
 
-        if ev["type"] == "cursor_update":
+        if ev["type"] == "hand_gesture":
+            handle_gesture(ev["gesture"], vertical_menu)
+        
+        elif ev["type"] == "cursor_update":
             mainFrame.set_hand(ev["points"].values())
         
         elif ev["type"] == "cursor_type":
@@ -236,13 +303,13 @@ while True:
             mainFrame.set_cursor_position(ev["point"])
 
         elif ev["type"] == "left_down":
-            handle_button_down(Event(ev["point"], ActionType.LEFT_BUTTON_DOWN, 0, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
+            handle_button_down(Event(ev["point"], ActionType.LEFT_BUTTON_DOWN, 0, mainFrame.get_rotation_level(), mainFrame.get_window_size(), mainFrame.get_zoom_level()))
 
         elif ev["type"] == "left_drag":
-            mouse_publisher.notify_click(Event(ev["point"], ActionType.LEFT_DRAG, 0, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
+            mouse_publisher.notify_click(Event(ev["point"], ActionType.LEFT_DRAG, 0, mainFrame.get_rotation_level(), mainFrame.get_window_size(), mainFrame.get_zoom_level()))
 
         elif ev["type"] == "scroll":
-            handle_scroll(Event(ev["point"], ActionType.SCROLL, ev["flags"], mainFrame.get_rotation_level(), mainFrame.get_window_size()))
+            handle_scroll(Event(ev["point"], ActionType.SCROLL, ev["flags"], mainFrame.get_rotation_level(), mainFrame.get_window_size(), mainFrame.get_zoom_level()))
 
         elif ev["type"] == "reset_drag":
             mouse_publisher.clear_subscriber()

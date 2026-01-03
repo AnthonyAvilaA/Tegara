@@ -6,14 +6,17 @@ import torch.optim as optim
 class SmallClassifier(nn.Module):
     def __init__(self):
         super().__init__()
-        self.criterion = nn.BCELoss()
+        self.criterion = nn.CrossEntropyLoss()
         self.net = nn.Sequential(
-            nn.Linear(63, 64),
+            nn.Linear(63, 128),
+            nn.ReLU(),
+            nn.Linear(128, 96),
+            nn.ReLU(),
+            nn.Linear(96, 64),
             nn.ReLU(),
             nn.Linear(64, 32),
             nn.ReLU(),
-            nn.Linear(32, 1),
-            nn.Sigmoid()
+            nn.Linear(32, 7),
         )
     
     def forward(self, x) -> torch.Tensor:
@@ -41,8 +44,17 @@ class SmallClassifier(nn.Module):
             if epoch % 50 == 0:
                 print(epoch, loss.item())
 
-    def predict(self, sample) -> int:
-        sample = self.normalize_sample(sample).flatten().astype(np.float32)
-        sample = torch.tensor(sample)
-        prob = self(sample).item()
-        return 1 if prob > 0.5 else 0
+    def predict(self, sample) -> tuple[float, int]:
+        sample_norm = self.normalize_sample(sample)
+        if sample_norm is None:
+            return 0
+        sample_flat = sample_norm.flatten().astype(np.float32)
+        sample_tensor = torch.tensor(sample_flat).unsqueeze(0)
+        
+        self.eval()
+
+        with torch.no_grad():
+            outputs = self(sample_tensor)
+            prob, predicted_class = torch.max(outputs, 1)
+        
+        return prob.item(), predicted_class.item()

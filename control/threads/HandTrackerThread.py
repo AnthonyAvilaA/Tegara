@@ -6,6 +6,7 @@ from model.Point import Point
 from model.HandDetectorWrapper import HandDetectorWrapper
 from view.MainFrame import MainFrame
 from model.SmallClassifier import SmallClassifier
+from definitions.HandsGestures import HandsGestures
 import torch
 import numpy as np
 
@@ -47,18 +48,20 @@ class HandTrackerThread(threading.Thread):
                 time.sleep(0.005)
                 continue
 
-            # ======== Clasificación ========
+            # ======== Clasificación Multiclases ========
             hand = hands[0]
             lmList = hand["lmList"]
 
-            x = []
-            for val in self.model.normalize_sample(lmList):
-                if val is not None:
-                    x.append(val)
+            x_norm = self.model.normalize_sample(lmList)
+            
+            if x_norm is None:
+                continue
 
-            x = torch.tensor(np.array(x), dtype=torch.float32).flatten().unsqueeze(0)
+            x_tensor = torch.tensor(np.array(x_norm), dtype=torch.float32).flatten().unsqueeze(0)
             with torch.no_grad():
-                pred: torch.Tensor = self.model(x)
+                outputs = self.model(x_tensor)
+                prob, pred = torch.max(outputs, 1)
+                gesture_id = pred.item()
 
             # ======== Normalización ========
             hand_points = self.hand_detector.get_hand_points(hands, 0)
@@ -81,20 +84,35 @@ class HandTrackerThread(threading.Thread):
                 "type": "cursor_update",
                 "points": hand_points
             })
+            
 
             # ======== Lógica de clic y drag ========
-            if index_finger is not None:
-                if pred.item() > 0.8:
-                    # inicio de punteo
-                    if self.start_timer:
-                        self.pointing_timer = cv2.getTickCount() + 0.3 * cv2.getTickFrequency()
-                        self.start_timer = False
+            if index_finger is None:
+                time.sleep(0.005)
+                continue
 
-                    elif cv2.getTickCount() > self.pointing_timer:
+            if gesture_id == 0:
+                gesture_id = 7
+            gesture = HandsGestures(gesture_id)
+
+            if gesture != HandsGestures.IDLE and prob.item() > 0.8:
+                if self.start_timer:
+                    self.pointing_timer = cv2.getTickCount() + 0.3 * cv2.getTickFrequency()
+                    self.start_timer = False
+                elif cv2.getTickCount() > self.pointing_timer:
+                    self.event_queue.put({
+                            "type": "hand_gesture",
+                            "gesture": gesture
+                        })
+                    if gesture == HandsGestures.POINTING or gesture == HandsGestures.ERASE or gesture == HandsGestures.FILL:                        
                         if self.first_click:
                             self.event_queue.put({
                                 "type": "left_down",
                                 "point": index_finger
+                            })
+                            self.event_queue.put({
+                                "type": "cursor_type",
+                                "cursor": 0
                             })
                             self.first_click = False
 
@@ -102,27 +120,24 @@ class HandTrackerThread(threading.Thread):
                             "type": "left_drag",
                             "point": index_finger
                         })
-
-                        self.event_queue.put({
-                            "type": "cursor_type",
-                            "cursor": 0
-                        })
-
-                # no dibuja
-                else:
-                    self.start_timer = True
-                    self.first_click = True
-                    self.event_queue.put({"type": "reset_drag"})
-                    
-                    self.event_queue.put({
-                        "type": "cursor_type",
-                        "cursor": 1
-                    })
-
-                # Cursor
+                    else:
+                        self.event_queue.put({"type": "reset_drag"})
+                        self.first_click = True
+                        self.start_timer = True
+            else:
+                self.start_timer = True
+                self.first_click = True
+                self.event_queue.put({"type": "reset_drag"})
+                
                 self.event_queue.put({
-                    "type": "cursor_position",
-                    "point": index_finger
+                    "type": "cursor_type",
+                    "cursor": 1
                 })
+
+            # Cursor
+            self.event_queue.put({
+                "type": "cursor_position",
+                "point": index_finger
+            })
 
             time.sleep(0.05)  # Desaturar CPU

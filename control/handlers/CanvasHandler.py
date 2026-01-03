@@ -30,7 +30,8 @@ class CanvasHandler(CommandHandler):
 
                 new_position = PointTranslator.window_to_canvas(self.event.position,
                                                          self.event.layer_rotation,
-                                                         self.canvas)
+                                                         self.canvas,
+                                                         self.event.layer_zoom_level)
 
                 match self.tool:
                     case Tools.PENCIL:
