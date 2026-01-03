@@ -1,5 +1,5 @@
 from control.commands.Command import Command
-from definitions.Key import Key
+from definitions.key import Key
 
 
 class KeyDebugCommand(Command):

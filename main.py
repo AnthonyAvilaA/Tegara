@@ -11,7 +11,7 @@ from view.MenuToggleable import MenuToggleable
 from view.ColorPickerToggleable import ColorPickerToggleable
 from view.ToggleableUI import ToggleableUI
 from control.handlers.KeyHandler import KeyHandler
-from definitions.Key import Key
+from definitions.key import Key
 from view.Canvas import Canvas
 from model.Color import COLOR_TRANSPARENT, COLOR_WHITE, Color, COLOR_DEFAULT_COLOR
 from view.MainFrame import MainFrame
@@ -32,7 +32,7 @@ import queue
 from control.threads.HandTrackerThread import HandTrackerThread
 from view.Menu import Menu
 from view.MenuIcon import MenuIcon
-from definitions.Tools import Tools
+from definitions.tools import Tools
 from control.ToolStatus import ToolStatus
 
 vid = cv2.VideoCapture(0)
@@ -57,15 +57,17 @@ tool_status = ToolStatus(Tools.PENCIL)
 timer = cv2.getTickCount()
 pointing_timer = cv2.getTickCount()
 start_timer = True
+USE_HAND_TRACKING = True
 
-hand_thread = HandTrackerThread(
-    event_queue,
-    vid,
-    hand_detector,
-    model,
-    mainFrame
-)
-hand_thread.start()
+if USE_HAND_TRACKING:
+    hand_thread = HandTrackerThread(
+        event_queue,
+        vid,
+        hand_detector,
+        model,
+        mainFrame
+    )
+    hand_thread.start()
 
 # temporal
 def change_draw_size(flags: int):
@@ -111,7 +113,6 @@ def handle_button_down(event: Event):
                 color = new_color
                 color_picker.update_color(color)
                 color_picker.set_dirty()
-                redo_history.clear()
                 
     elif isinstance(UIElement, ColorPickerToggleable):
         toggle_color_command: PickColorCommand = ToggleableUIHandler(UIElement, event).get_command()
@@ -144,36 +145,29 @@ def desactivate_all_toggleable_ui_unless(unless: ToggleableUI = None):
             toggleable.set_toggle(False)
 
 def control_mouse_event(event, x, y, flags, param):
-    point = Point(x, y)
-
+    # TODO: Put this in new class MouseHandler
     if event == cv2.EVENT_LBUTTONDOWN:
-        event_queue.put({"type": "left_down", "point": point})
-        # handle_button_down(Event(Point(x, y), ActionType.LEFT_BUTTON_DOWN, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
+        handle_button_down(Event(Point(x, y), ActionType.LEFT_BUTTON_DOWN, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
 
     if event == cv2.EVENT_RBUTTONDOWN:
-        event_queue.put({"type": "right_down", "point": point})
-        # handle_button_down(Event(Point(x, y), ActionType.RIGHT_BUTTON_DOWN, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
+        handle_button_down(Event(Point(x, y), ActionType.RIGHT_BUTTON_DOWN, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
 
     if event == cv2.EVENT_MOUSEMOVE and flags == cv2.EVENT_FLAG_LBUTTON:
-        event_queue.put({"type": "left_drag", "point": point})
-        # mouse_publisher.notify_click(Event(Point(x, y), ActionType.LEFT_DRAG, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
+        mouse_publisher.notify_click(Event(Point(x, y), ActionType.LEFT_DRAG, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
 
     if event == cv2.EVENT_MOUSEMOVE and flags == cv2.EVENT_FLAG_RBUTTON:
-        event_queue.put({"type": "right_drag", "point": point})
-        # mouse_publisher.notify_click(Event(Point(x, y), ActionType.RIGHT_DRAG, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
+        mouse_publisher.notify_click(Event(Point(x, y), ActionType.RIGHT_DRAG, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
     
     if event == cv2.EVENT_LBUTTONUP or event == cv2.EVENT_RBUTTONUP:
-        event_queue.put({"type": "button_up", "point": point})
-        # mouse_publisher.clear_subscriber()
-        # redo_history.clear()
+        mouse_publisher.clear_subscriber()
+        redo_history.clear()
 
     if event == cv2.EVENT_MOUSEWHEEL:
-        event_queue.put({"type": "scroll", "point": point, "flags": flags})
-        # handle_scroll(Event(Point(x, y), ActionType.SCROLL, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
+        handle_scroll(Event(Point(x, y), ActionType.SCROLL, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
 
 mainFrame.add_cursor_listener(control_mouse_event)
 
-canvas_size_ratio = 0.5
+canvas_size_ratio = 0.8
 mainFrame.set_rotation_level = 0.0
 mainFrame.add_layer(Canvas(int(monitors[0].width * canvas_size_ratio), int(monitors[0].height * canvas_size_ratio), COLOR_WHITE))
 
@@ -221,9 +215,9 @@ prev_index_finger_point: dict[str, Point] = {i: Point(400, 300) for i in range(2
 
 
 while True:
+
     # =========== PROCESAR EVENTOS DEL HILO ===========
-    events_processed = 0
-    while not event_queue.empty() and events_processed < 20:
+    while not event_queue.empty():
         ev = event_queue.get()
 
         if ev["type"] == "cursor_update":
@@ -241,18 +235,13 @@ while True:
         elif ev["type"] == "left_drag":
             mouse_publisher.notify_click(Event(ev["point"], ActionType.LEFT_DRAG, 0, mainFrame.get_rotation_level(), mainFrame.get_window_size()))
 
-        elif ev["type"] == "scroll":
-            handle_scroll(Event(ev["point"], ActionType.SCROLL, ev["flags"], mainFrame.get_rotation_level(), mainFrame.get_window_size()))
-
         elif ev["type"] == "reset_drag":
             mouse_publisher.clear_subscriber()
-        
-        events_processed += 1
 
     # =========== REDIBUJAR ===========
     mainFrame.redraw()
 
-    key = cv2.waitKey(1) & 0xFF
+    key = cv2.waitKey(1)
     if not mouse_publisher.has_subscriber() or key == Key.ESC:
         key_listener.get_command(key).execute()
 

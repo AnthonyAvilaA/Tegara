@@ -3,13 +3,14 @@ from control.commands.CanvasColorPickerCommand import CanvasColorPickerCommand
 from control.commands.CanvasDrawCommand import CanvasDrawCommand
 from control.commands.CanvasEraseCommand import CanvasEraseCommand
 from control.commands.CanvasFillCommand import CanvasFillCommand
+from control.commands.CanvasEnchancedPencilCommand import CanvasEnchancedPencilCommand
 from control.handlers.CommandHandler import CommandHandler
 from model.Point import Point
 from view.Canvas import Canvas
 from model.Event import Event
 from model.Color import Color
 from model.ActionType import ActionType
-from definitions.Tools import Tools
+from definitions.tools import Tools
 from control.PointTranslator import PointTranslator
 import math
 
@@ -54,7 +55,8 @@ class CanvasHandler(CommandHandler):
                     case Tools.COLOR_PICKER:
                         return CanvasColorPickerCommand(canvas=self.canvas,
                                                         position=new_position)
-
+                    case Tools.ENCHANCED_PENCIL:
+                        return CanvasEnchancedPencilCommand(canvas=self.canvas, draw_size=self.draw_size)
             case _:
                 return None
             

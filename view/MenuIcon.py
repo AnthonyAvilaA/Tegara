@@ -1,7 +1,7 @@
 from view.Clickeable import Clickeable
 from model.Point import Point
 import numpy as np
-import definitions.Tools as Tools
+import definitions.tools as Tools
 import cv2
 
 class MenuIcon(Clickeable):
