@@ -9,7 +9,7 @@ from model.SmallClassifier import SmallClassifier
 vid = cv2.VideoCapture(0)
 
 # Initializa detector
-detector = HandDetector(staticMode=False, maxHands=2, modelComplexity=1, detectionCon=0.2, minTrackCon=0.1)
+detector = HandDetector(staticMode=False, maxHands=1, modelComplexity=1, detectionCon=0.2, minTrackCon=0.1)
 startRecording = False
 
 pointingRecord = list() # dedo índice apuntando
@@ -31,8 +31,8 @@ try:
     model.load_state_dict(torch.load("modelo_pointing_v2.pth", map_location="cpu"))
     modelTrained = True
     print("Modelo cargado. Continuando entrenamiento...")
-except FileNotFoundError:
-    print("No existe modelo anterior. Se entrenará desde cero.")
+except Exception as e:
+    print(e)
 
 
 while(True):      

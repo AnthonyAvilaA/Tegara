@@ -69,14 +69,11 @@ class ColorPickerToggleable(ToggleableUI[ColorPicker]):
     
     def update_color(self, color: Color) -> None:
         self.set_toggle(False)
-        print("Updating color to:", color)
         if color is None:
             return
         self.color = color
         super().set_image(self.create_image())
         super().set_dirty()
-        print(self.get_image().shape)
-        print(self.get_width(), self.get_height())
 
     def get_color_at(self, point: Point) -> Color:
         element = super().get_element()
@@ -89,6 +86,3 @@ class ColorPickerToggleable(ToggleableUI[ColorPicker]):
         element = super().get_element()
         if super().is_toggled_on():
             element.handle_scroll(event)
-            new_color = element.get_color_at(self.__point)
-            self.update_color(new_color)
-            super().set_dirty()

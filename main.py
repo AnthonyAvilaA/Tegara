@@ -1,3 +1,9 @@
+import math
+import cv2
+import torch
+import queue
+from screeninfo import get_monitors
+
 from control.MouseListener import MouseListener
 from control.commands.PickColorCommand import PickColorCommand
 from control.commands.ToggleMenuCommand import ToggleMenuCommand
@@ -5,35 +11,34 @@ from control.commands.CanvasColorPickerCommand import CanvasColorPickerCommand
 from control.commands.ExitCommand import ExitCommand
 from control.commands.NoneCommand import NoneCommand
 from control.commands.UndoCommand import UndoCommand
+from control.commands.Command import Command
 from control.commands.RedoCommand import RedoCommand
-from view.MenuToggleable import MenuToggleable
-from view.ColorPickerToggleable import ColorPickerToggleable
-from view.ToggleableUI import ToggleableUI
-from control.handlers.KeyHandler import KeyHandler
-from definitions.Key import Key
-from view.Canvas import Canvas
-from model.Color import COLOR_TRANSPARENT, COLOR_WHITE, Color, COLOR_DEFAULT_COLOR
-from view.MainFrame import MainFrame
-from control.MousePublisher import MousePublisher
-from model.Event import Event
-from model.ActionType import ActionType
 from control.handlers.CanvasHandler import CanvasHandler
 from control.handlers.ToggleableUIHandler import ToggleableUIHandler
-from control.commands.Command import Command
-from model.Point import Point
-from view.ColorPicker import ColorPicker
-from screeninfo import get_monitors
-import cv2
-from model.SmallClassifier import SmallClassifier
-import torch
-from model.HandDetectorWrapper import HandDetectorWrapper
-import queue
+from control.handlers.KeyHandler import KeyHandler
 from control.threads.HandTrackerThread import HandTrackerThread
+from control.ToolStatus import ToolStatus
+from control.MousePublisher import MousePublisher
+
+from view.ToggleableUI import ToggleableUI
+from view.ColorPickerToggleable import ColorPickerToggleable
+from view.ColorPicker import ColorPicker
+from view.MenuToggleable import MenuToggleable
 from view.Menu import Menu
 from view.MenuIcon import MenuIcon
-from definitions.Tools import Tools
-from control.ToolStatus import ToolStatus
+from view.Canvas import Canvas
+from view.MainFrame import MainFrame
+
+from model.Color import COLOR_TRANSPARENT, COLOR_WHITE, Color, COLOR_DEFAULT_COLOR
+from model.Event import Event
+from model.ActionType import ActionType
+from model.Point import Point
+from model.SmallClassifier import SmallClassifier
+from model.HandDetectorWrapper import HandDetectorWrapper
+
 from definitions.HandsGestures import HandsGestures
+from definitions.Tools import Tools
+from definitions.Key import Key
 
 vid = cv2.VideoCapture(0)
 
@@ -91,10 +96,11 @@ def handle_button_down(event: Event):
     UIElement = mainFrame.get_element_selected(event.position)
     print(f"UI Element clicked: {UIElement}")
 
-    toggleable_element = None
-    if isinstance(UIElement, ToggleableUI):
-        toggleable_element = UIElement
-    desactivate_all_toggleable_ui_unless(toggleable_element)
+    if tool_status.get_tool() != Tools.NONE:
+        if isinstance(UIElement, ToggleableUI):
+            desactivate_all_toggleable_ui_unless(UIElement)
+        else:
+            desactivate_all_toggleable_ui_unless(None)
     
 
     if isinstance(UIElement, Canvas):
@@ -105,7 +111,6 @@ def handle_button_down(event: Event):
         command = canvas_handler.get_command()
         start_command(command)
 
-        print(f"Tool used: {tool_status.get_tool()}")
         if isinstance(command, CanvasColorPickerCommand):
             new_color = command.get_color_selected()
             if new_color is not None:
@@ -134,9 +139,9 @@ def handle_button_down(event: Event):
                 tool_status.set_tool(tool_type)
 
 def handle_scroll(event: Event):
-    UIElement = mainFrame.get_element_selected(event.position)
-    if isinstance(UIElement, ColorPickerToggleable):
-        UIElement.handle_scroll(event)
+    global color_picker
+    if color_picker.is_toggled_on():
+        color_picker.handle_scroll(event)
     else:
         change_draw_size(event.flags)
 
@@ -170,10 +175,10 @@ def control_mouse_event(event, x, y, flags, param):
         # redo_history.clear()
 
     if event == cv2.EVENT_MOUSEWHEEL:
-        handle_scroll(Event(Point(x, y), ActionType.SCROLL, flags, mainFrame.get_rotation_level(), mainFrame.get_window_size(), mainFrame.get_zoom_level()))
+        event_queue.put({"type": "scroll", "point": Point(x, y), "flags": flags})
 
 def handle_gesture(gesture: HandsGestures, menu: MenuToggleable = None):
-    global prev_hand_size
+    global prev_hand_size, prev_hand_center_y
     
     gesture_tool = None
     match gesture:
@@ -186,8 +191,6 @@ def handle_gesture(gesture: HandsGestures, menu: MenuToggleable = None):
         case _:
             gesture_tool = Tools.NONE
 
-    print(f"Gesture detected: {gesture}, changing tool to {gesture_tool}")
-
     if gesture_tool == tool_status.get_tool() and gesture_tool != Tools.NONE:
         return
 
@@ -199,6 +202,7 @@ def handle_gesture(gesture: HandsGestures, menu: MenuToggleable = None):
             tool_status.set_tool(Tools.ERASER)
             menu.set_tool(Tools.ERASER)
         case HandsGestures.ZOOM:
+            tool_status.set_tool(Tools.NONE)
             hand = mainFrame.get_hand_points()
             # conseguir el recuadro de la mano
             point = hand.pop()
@@ -225,20 +229,43 @@ def handle_gesture(gesture: HandsGestures, menu: MenuToggleable = None):
             tool_status.set_tool(Tools.FILL)
             menu.set_tool(Tools.FILL)
         case HandsGestures.ROTATE:
-            pass
+            tool_status.set_tool(Tools.NONE)
+            hand = mainFrame.get_hand_points()
+            index_finger = hand[8]
+            middle_finger = hand[12]
+            angle = math.degrees(math.atan2(middle_finger.get_y() - index_finger.get_y(),
+                                            middle_finger.get_x() - index_finger.get_x()))
+            if 85 <= angle <= 95:
+                angle = 90.0
+            
+            angle = (angle + 360) % 360  # Normalize angle to [0, 360)
+            mainFrame.set_rotation_level(360 - angle)
         case HandsGestures.SCROLL:
-            pass
+            tool_status.set_tool(Tools.NONE)
+            hand = mainFrame.get_hand_points()
+            center = hand[9] # Approximate center of the hand
+            if prev_hand_center_y is not None:
+                if center.get_y() < prev_hand_center_y - 20:
+                    for _ in range(20):
+                        event_queue.put({"type": "scroll", "point": hand[8], "flags": 1})
+                elif center.get_y() > prev_hand_center_y + 20:
+                    for _ in range(20):
+                        event_queue.put({"type": "scroll", "point": hand[8], "flags": -1})            
+            prev_hand_center_y = center.get_y()
         case HandsGestures.IDLE:
+            tool_status.set_tool(Tools.NONE)
             prev_hand_size = None
+            prev_hand_center_y = None
         case _:
             print("No recognized gesture")
 
+
 prev_hand_size = None
+prev_hand_center_y = None
 
 mainFrame.add_cursor_listener(control_mouse_event)
 
 canvas_size_ratio = 0.6
-mainFrame.set_rotation_level = 0.0
 mainFrame.add_layer(Canvas(int(monitors[0].width * canvas_size_ratio), int(monitors[0].height * canvas_size_ratio), COLOR_WHITE))
 
 color_picker = ColorPickerToggleable(Point(50, monitors[0].height - 200), 100, 100, ColorPicker(Point(50, monitors[0].height - 300), 400, 200), color=color, toggled_on=False)
@@ -292,6 +319,7 @@ while True:
 
         if ev["type"] == "hand_gesture":
             handle_gesture(ev["gesture"], vertical_menu)
+            print(f"Gesture detected: {ev['gesture']}")
         
         elif ev["type"] == "cursor_update":
             mainFrame.set_hand(ev["points"].values())

@@ -55,6 +55,7 @@ class SmallClassifier(nn.Module):
 
         with torch.no_grad():
             outputs = self(sample_tensor)
-            prob, predicted_class = torch.max(outputs, 1)
+            probabilities = torch.softmax(outputs, dim=1)
+            prob, predicted_class = torch.max(probabilities, 1)
         
         return prob.item(), predicted_class.item()

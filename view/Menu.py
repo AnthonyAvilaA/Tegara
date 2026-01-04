@@ -26,11 +26,9 @@ class Menu(Clickeable):
         return True
     
     def is_dirty(self) -> bool:
-        print("Menu dirty state:", self.__is_dirty)
         return self.__is_dirty
     
     def clear_dirty(self) -> None:
-        print("Clearing dirty flag for Menu")
         self.__is_dirty = False
 
     def set_dirty(self) -> None:
@@ -127,7 +125,6 @@ class Menu(Clickeable):
                 
                 border_color = COLOR_BLACK.get_tuple()
                 if i == self.__tool_selected:
-                    print("Dibujando borde azul para la herramienta seleccionada:", i)
                     border_color = COLOR_BLUE.get_tuple()
                 cv2.rectangle(menu_image, (start_x - 2, start_y - 2), (start_x + w + 1, start_y + h + 1), border_color, 2)
 
@@ -142,7 +139,6 @@ class Menu(Clickeable):
     
     def set_tool(self, tool_index: int) -> None:
         if 0 <= tool_index < len(self.__elements):
-            print("Setting tool to index:", tool_index)
             self.__tool_selected = tool_index
             self.__set_image()
             self.set_dirty()

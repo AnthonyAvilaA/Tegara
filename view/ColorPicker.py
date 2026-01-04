@@ -67,7 +67,7 @@ class ColorPicker(Clickeable):
         return rgba
     
     def handle_scroll(self, event: Event):
-        delta = event.flags // 2_000_000
+        delta = event.flags
         self.__saturation = max(0, min(self.__saturation + delta, 255))
         self.__image = self._generate_full_hsv()
         self.set_dirty()

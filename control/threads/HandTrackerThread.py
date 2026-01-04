@@ -95,7 +95,7 @@ class HandTrackerThread(threading.Thread):
                 gesture_id = 7
             gesture = HandsGestures(gesture_id)
 
-            if gesture != HandsGestures.IDLE and prob.item() > 0.8:
+            if gesture != HandsGestures.IDLE and prob.item() > 0.9:
                 if self.start_timer:
                     self.pointing_timer = cv2.getTickCount() + 0.3 * cv2.getTickFrequency()
                     self.start_timer = False

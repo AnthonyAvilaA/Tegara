@@ -204,6 +204,7 @@ class MainFrame:
     
     def set_rotation_level(self, rotation: float) -> None:
         self.__rotation_level = rotation
+        self.__layers[self.__current_layer].set_dirty()
 
     def draw_cursor(self, image: np.ndarray) -> None:
         color = COLOR_BLACK
