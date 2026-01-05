@@ -144,6 +144,18 @@ class MainFrame:
     def add_layer(self, canva: Canvas) -> None:
         self.__layers.append(canva)
     
+    def remove_layer(self, index: int) -> None:
+        if index == -1:
+            index = len(self.__layers) - 1
+
+        if 0 <= index < len(self.__layers) and len(self.__layers) > 1:
+            removed_layer = self.__layers.pop(index)
+
+            if self.__current_layer >= len(self.__layers):
+                self.__current_layer = max(0, len(self.__layers) - 1)
+        
+        self.__layers[self.__current_layer].set_dirty()
+    
     def add_UI_element(self, element: Clickeable) -> None:
         self.__UI.append(element)
     
@@ -158,11 +170,7 @@ class MainFrame:
     
     def get_layers(self) -> list[Canvas]:
         return self.__layers.copy()
-    
-    def remove_layer(self, index: int) -> None:
-        if 0 <= index < len(self.__layers):
-            del self.__layers[index]
-            
+        
     def remove_UI_element(self, element: Clickeable) -> None:
         if element in self.__UI:
             self.__UI.remove(element)
@@ -180,6 +188,10 @@ class MainFrame:
     
     def get_current_layer_index(self) -> int:
         return self.__current_layer
+    
+    def set_current_layer(self, index: int) -> None:
+        if 0 <= index < len(self.__layers):
+            self.__current_layer = index
     
     def set_cursor_position(self, point: Point) -> None:
         self.__cursor = point
@@ -225,6 +237,7 @@ class MainFrame:
         canvas_point = PointTranslator.window_to_canvas(point, self.__rotation_level, self.__layers[self.__current_layer], self.__zoom_level)
 
         if self.__layers[self.__current_layer].check_click(canvas_point):
+            print(self.__current_layer)
             return self.__layers[self.__current_layer]
         return None
     
