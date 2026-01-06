@@ -5,6 +5,7 @@ import queue
 from screeninfo import get_monitors
 
 from control.MouseListener import MouseListener
+from control.commands.CanvasEnchancedPencilCommand import CanvasEnchancedPencilCommand
 from control.commands.PickColorCommand import PickColorCommand
 from control.commands.ToggleMenuCommand import ToggleMenuCommand
 from control.commands.CanvasColorPickerCommand import CanvasColorPickerCommand
@@ -40,8 +41,8 @@ from definitions.HandsGestures import HandsGestures
 from definitions.Tools import Tools
 from definitions.Key import Key
 
-vid = cv2.VideoCapture(0)
 
+vid = cv2.VideoCapture(0)
 monitors = get_monitors()
 event_queue = queue.Queue()
 
@@ -58,11 +59,13 @@ toggleable_ui_elements: list[ToggleableUI] = []
 color = COLOR_DEFAULT_COLOR  # Default color set to black
 draw_size = 10  # Default draw size
 tool_status = ToolStatus(Tools.PENCIL)
+previous_tool = None
+current_comand = None
 
 timer = cv2.getTickCount()
 pointing_timer = cv2.getTickCount()
 start_timer = True
-USE_HAND_TRACKING = True
+USE_HAND_TRACKING = False
 
 if USE_HAND_TRACKING:
     hand_thread = HandTrackerThread(
@@ -90,7 +93,7 @@ def start_command(command: Command):
             mouse_publisher.set_subscriber(command)
 
 def handle_button_down(event: Event):
-    global color, color_picker # No me gusta usar global, pero no se me ocurre otra forma
+    global color, color_picker, current_comand # No me gusta usar global, pero no se me ocurre otra forma
     redo_history.clear()
 
     UIElement = mainFrame.get_element_selected(event.position)
@@ -109,8 +112,10 @@ def handle_button_down(event: Event):
         canvas_handler = CanvasHandler(UIElement, event, color, draw_size,
                                        tool_status.get_tool())
         command = canvas_handler.get_command()
+        current_comand = command
         start_command(command)
 
+        print(f"Tool used: {tool_status.get_tool()}")
         if isinstance(command, CanvasColorPickerCommand):
             new_color = command.get_color_selected()
             if new_color is not None:
@@ -129,14 +134,38 @@ def handle_button_down(event: Event):
             color = new_color
     
     elif isinstance(UIElement, MenuToggleable):
-        toggle_menu_command: ToggleMenuCommand = ToggleableUIHandler(UIElement, event).get_command()
+        toggle_menu_command = ToggleableUIHandler(UIElement, event).get_command()
         toggle_menu_command.set_cursor(event.position)
         toggle_menu_command.execute()
+
         menu_icon = toggle_menu_command.get_tool_selected()
-        if menu_icon is not None:
-            tool_type = menu_icon.get_type()
-            if tool_type is not None:
-                tool_status.set_tool(tool_type)
+        if menu_icon is None:
+            return
+
+        tool_type = menu_icon.get_type()
+        if tool_type is None:
+            return
+
+        global previous_tool
+        previous_tool = tool_status.get_tool()
+        
+        if tool_type == Tools.ENCHANCED_PENCIL:
+            mainFrame.create_temp_layer(int(monitors[0].width * canvas_size_ratio), int(monitors[0].height * canvas_size_ratio), COLOR_TRANSPARENT)
+            mainFrame.set_actual_layer(1)
+        else:
+            
+            mainFrame.merge_temp_layer()
+            
+        if tool_type == Tools.ENCHANCED_PENCIL and previous_tool == Tools.ENCHANCED_PENCIL:
+            run_detection_from_canvas()
+            return
+
+        tool_status.set_tool(tool_type)
+
+def run_detection_from_canvas():
+    print("Running sketch detection...")
+    if current_comand and isinstance(current_comand, CanvasEnchancedPencilCommand):
+        current_comand.draw_sketch_on_canvas()
 
 def handle_scroll(event: Event):
     global color_picker
@@ -267,6 +296,7 @@ mainFrame.add_cursor_listener(control_mouse_event)
 
 canvas_size_ratio = 0.6
 mainFrame.add_layer(Canvas(int(monitors[0].width * canvas_size_ratio), int(monitors[0].height * canvas_size_ratio), COLOR_WHITE))
+
 
 color_picker = ColorPickerToggleable(Point(50, monitors[0].height - 200), 100, 100, ColorPicker(Point(50, monitors[0].height - 300), 400, 200), color=color, toggled_on=False)
 toggleable_ui_elements.append(color_picker)
