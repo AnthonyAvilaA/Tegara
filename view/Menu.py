@@ -26,7 +26,7 @@ class Menu(Clickeable):
         return True
     
     def is_dirty(self) -> bool:
-        print("Menu dirty state:", self.__is_dirty)
+        #print("Menu dirty state:", self.__is_dirty)
         return self.__is_dirty
     
     def clear_dirty(self) -> None:

@@ -16,7 +16,7 @@ class MainFrame:
         self.__layers: list[Canvas] = []
         self.__UI: list[Clickeable] = []
         self.__rotation_level = 0
-        
+        self.__temp_layer: Canvas | None = None
         self.__width = width
         self.__height = height
         self.__current_layer = 0
@@ -277,3 +277,38 @@ class MainFrame:
         if self.__zoom_level < 0.1:
             self.__zoom_level = 0.1
         self.__layers[self.__current_layer].set_dirty()
+        
+    def create_temp_layer(self, width, height, color):
+        if self.__temp_layer is None:
+            self.__temp_layer = Canvas(width, height, color)
+            self.__layers.append(self.__temp_layer)
+
+    def remove_temp_layer(self):
+        if self.__temp_layer in self.__layers:
+            self.__layers.remove(self.__temp_layer)
+        self.__temp_layer = None
+
+    def get_temp_layer(self) -> Canvas | None:
+        return self.__temp_layer
+
+    def merge_temp_layer(self):
+        temp = self.get_temp_layer()
+        if temp is None:
+            return
+
+        base = self.__layers[0]  # layer permanente
+
+        base_img = base.get_image()
+        temp_img = temp.get_image()
+
+        # Fusionar RGBA → RGBA
+        merged = self.alpha_blend(base_img, temp_img)
+
+        base.set_image(merged)
+        base.set_dirty()
+
+        # Eliminar temp layer
+        self.remove_temp_layer()
+
+        # Volver al base
+        self.__current_layer = 0
