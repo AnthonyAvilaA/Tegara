@@ -119,6 +119,11 @@ if USE_HAND_TRACKING:
     )
     hand_thread.start()
 
+TEMP_LAYER_TOOLS = {
+    Tools.ENCHANCED_PENCIL,
+    Tools.TEXT
+}
+
 # temporal
 def change_draw_size(flags: int):
     global draw_size
@@ -133,6 +138,8 @@ def start_command(command: Command):
         undo_history.append(command)
         if isinstance(command, MouseListener):
             mouse_publisher.set_subscriber(command)
+
+
 
 def handle_button_down(event: Event):
     global color, color_picker, current_comand # No me gusta usar global, pero no se me ocurre otra forma
@@ -179,35 +186,17 @@ def handle_button_down(event: Event):
         toggle_menu_command = ToggleableUIHandler(UIElement, event).get_command()
         toggle_menu_command.set_cursor(event.position)
         toggle_menu_command.execute()
-        print("Menu toggled", type(toggle_menu_command))
         menu_icon = toggle_menu_command.get_tool_selected()
+        
         if menu_icon is None:
             return
 
-        tool_type = menu_icon.get_type()
-        if tool_type is None:
+        new_tool = menu_icon.get_type()
+        if new_tool is None:
             return
 
-        global previous_tool
-        previous_tool = tool_status.get_tool()
-        
-        if tool_type == Tools.ENCHANCED_PENCIL and previous_tool == Tools.ENCHANCED_PENCIL:
-            run_detection_from_canvas()
-            mainFrame.merge_temp_layer()
-        
-        if tool_type == Tools.ENCHANCED_PENCIL:
-            mainFrame.create_temp_layer(int(monitors[0].width * canvas_size_ratio), int(monitors[0].height * canvas_size_ratio), COLOR_TRANSPARENT)
-            mainFrame.set_actual_layer(1)
-            
-        if tool_type == Tools.TEXT and previous_tool == Tools.TEXT:
-            run_detect_text_from_canvas()
-                
-        if tool_type == Tools.TEXT:
-            print("using text detection tool")
-            mainFrame.create_temp_layer(int(monitors[0].width * canvas_size_ratio), int(monitors[0].height * canvas_size_ratio), COLOR_TRANSPARENT)
-            mainFrame.set_actual_layer(1)
-            
-        tool_status.set_tool(tool_type)
+        switch_tool(new_tool, vertical_menu)
+        return
 
 def run_detection_from_canvas():
     print("Running sketch detection...")
@@ -235,6 +224,42 @@ def switch_back_to_pencil(menu: MenuToggleable | None = None):
 
     if menu is not None:
         menu.set_tool(Tools.PENCIL)
+def switch_tool(new_tool: Tools, menu=None):
+    print(f"Switching tool to: {new_tool}")
+    global previous_tool, current_comand
+
+    old_tool = tool_status.get_tool()
+
+    if new_tool == old_tool and old_tool in TEMP_LAYER_TOOLS:
+        if old_tool == Tools.ENCHANCED_PENCIL:
+            run_detection_from_canvas()
+        elif old_tool == Tools.TEXT:
+            run_detect_text_from_canvas()
+
+        mainFrame.merge_temp_layer()
+
+        # volver a pencil
+        tool_status.set_tool(Tools.PENCIL)
+        if menu:
+            menu.set_tool(Tools.PENCIL)
+        return
+
+
+    if old_tool in TEMP_LAYER_TOOLS and new_tool != old_tool:
+        mainFrame.remove_temp_layer()
+        mainFrame.set_actual_layer(0)
+
+    if new_tool in TEMP_LAYER_TOOLS:
+        mainFrame.create_temp_layer(
+            int(monitors[0].width * canvas_size_ratio),
+            int(monitors[0].height * canvas_size_ratio),
+            COLOR_TRANSPARENT
+        )
+        mainFrame.set_actual_layer(1)
+
+    tool_status.set_tool(new_tool)
+    if menu:
+        menu.set_tool(new_tool)
 
 def handle_scroll(event: Event):
     global color_picker
