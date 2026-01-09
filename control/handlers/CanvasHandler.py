@@ -1,3 +1,4 @@
+from control.commands.CanvasTextCommand import CanvasTextCommand
 from control.commands.Command import Command
 from control.commands.CanvasColorPickerCommand import CanvasColorPickerCommand
 from control.commands.CanvasDrawCommand import CanvasDrawCommand
@@ -58,6 +59,8 @@ class CanvasHandler(CommandHandler):
                     case Tools.COLOR_PICKER:
                         return CanvasColorPickerCommand(canvas=self.canvas,
                                                         position=new_position)
+                    case Tools.TEXT:
+                        return CanvasTextCommand(None)
                     case Tools.ENCHANCED_PENCIL:
                         return CanvasEnchancedPencilCommand(canvas=self.canvas,
                                                 color=self.color,

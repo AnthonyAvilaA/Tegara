@@ -14,7 +14,7 @@ class CanvasEnchancedPencilCommand(CanvasDrawCommand):
         super().__init__(*args, **kwargs)
 
         self.memory = []
-        self.model = YOLO("../yolo.pt")
+        self.model = YOLO("/home/lily/ULPGC/4year/VC/Tegara/yolo.pt")
 
     def undo(self):
         if self.memory:

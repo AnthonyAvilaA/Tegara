@@ -6,6 +6,7 @@ from screeninfo import get_monitors
 
 from control.MouseListener import MouseListener
 from control.commands.CanvasEnchancedPencilCommand import CanvasEnchancedPencilCommand
+from control.commands.CanvasTextCommand import CanvasTextCommand
 from control.commands.PickColorCommand import PickColorCommand
 from control.commands.ToggleMenuCommand import ToggleMenuCommand
 from control.commands.CanvasColorPickerCommand import CanvasColorPickerCommand
@@ -113,6 +114,8 @@ def handle_button_down(event: Event):
                                        tool_status.get_tool())
         command = canvas_handler.get_command()
         current_comand = command
+        if isinstance(current_comand, CanvasTextCommand):
+            current_comand.set_image(mainFrame.image)
         start_command(command)
 
         print(f"Tool used: {tool_status.get_tool()}")
@@ -296,7 +299,6 @@ mainFrame.add_cursor_listener(control_mouse_event)
 
 canvas_size_ratio = 0.6
 mainFrame.add_layer(Canvas(int(monitors[0].width * canvas_size_ratio), int(monitors[0].height * canvas_size_ratio), COLOR_WHITE))
-
 
 color_picker = ColorPickerToggleable(Point(50, monitors[0].height - 200), 100, 100, ColorPicker(Point(50, monitors[0].height - 300), 400, 200), color=color, toggled_on=False)
 toggleable_ui_elements.append(color_picker)

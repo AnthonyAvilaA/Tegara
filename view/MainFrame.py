@@ -20,7 +20,7 @@ class MainFrame:
         self.__width = width
         self.__height = height
         self.__current_layer = 0
-        self.__image = np.full((height, width, 4), 255, dtype=np.uint8)
+        self.image = np.full((height, width, 4), 255, dtype=np.uint8)
         self.__cursor: Point = None
         self.__hand_data: list[Point] = []
         self.__zoom_level = 1.0
@@ -44,9 +44,9 @@ class MainFrame:
             for element in self.__UI:
                 self.draw_element(image_to_draw_on, element)
 
-            self.__image = image_to_draw_on
+            self.image = image_to_draw_on
         
-        image_display = self.__image.copy()   
+        image_display = self.image.copy()
 
         for point in self.__hand_data:
             cv2.circle(image_display, (point.get_x(), point.get_y()), 5, (0, 0, 255, 255), cv2.FILLED)
