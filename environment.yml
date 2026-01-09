@@ -13,3 +13,5 @@ dependencies:
   - mediapipe=0.10.9
   - ultralytics
   - lap
+#python -m pip install paddlepaddle==3.2.2 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
+#pip install paddleocr

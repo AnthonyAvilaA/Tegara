@@ -5,6 +5,8 @@ from control.commands.CanvasDrawCommand import CanvasDrawCommand
 from control.commands.CanvasEraseCommand import CanvasEraseCommand
 from control.commands.CanvasFillCommand import CanvasFillCommand
 from control.commands.CanvasEnchancedPencilCommand import CanvasEnchancedPencilCommand
+from control.commands.CanvasTextDetectionComand import CanvasTxtCommand
+from control.commands.ClearCanvasCommand import ClearCanvasCommand
 from control.handlers.CommandHandler import CommandHandler
 from model.Point import Point
 from view.Canvas import Canvas
@@ -59,8 +61,16 @@ class CanvasHandler(CommandHandler):
                     case Tools.COLOR_PICKER:
                         return CanvasColorPickerCommand(canvas=self.canvas,
                                                         position=new_position)
+                    
                     case Tools.TEXT:
-                        return CanvasTextCommand(None)
+                        return CanvasTxtCommand(canvas=self.canvas,
+                                                color=self.color,
+                                                position=new_position,
+                                                draw_size=self.draw_size,
+                                                line_density_factor=line_density,
+                                                max_points_for_line=80,
+                                                optimization_factor=optimization,
+                                                smoothing_factor=0.65)
                     case Tools.ENCHANCED_PENCIL:
                         return CanvasEnchancedPencilCommand(canvas=self.canvas,
                                                 color=self.color,
@@ -70,6 +80,8 @@ class CanvasHandler(CommandHandler):
                                                 max_points_for_line=80,
                                                 optimization_factor=optimization,
                                                 smoothing_factor=0.65)
+                    case Tools.CLEAR_CANVAS:
+                        return ClearCanvasCommand(canvas=self.canvas)
             case _:
                 return None
             

@@ -53,3 +53,7 @@ class Canvas(Clickeable):
     
     def get_height(self) -> int:
         return self._image.shape[0]
+    
+    def clear(self, color) -> None:
+        self._image[:] = color
+        self.set_dirty()

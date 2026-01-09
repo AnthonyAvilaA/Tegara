@@ -6,6 +6,8 @@ from screeninfo import get_monitors
 
 from control.MouseListener import MouseListener
 from control.commands.CanvasEnchancedPencilCommand import CanvasEnchancedPencilCommand
+from control.commands.CanvasTextDetectionComand import CanvasTextDetectionCommand
+from control.commands.CanvasTextDetectionComand import CanvasTxtCommand
 from control.commands.CanvasTextCommand import CanvasTextCommand
 from control.commands.PickColorCommand import PickColorCommand
 from control.commands.ToggleMenuCommand import ToggleMenuCommand
@@ -41,12 +43,52 @@ from model.HandDetectorWrapper import HandDetectorWrapper
 from definitions.HandsGestures import HandsGestures
 from definitions.Tools import Tools
 from definitions.Key import Key
+from paddleocr import PaddleOCR
+import numpy as np
+import time
+'''
+_PADDLE_OCR = None
+def rgba_to_white_bg(rgbA_img: np.ndarray) -> np.ndarray:
+    """
+    Convierte una imagen RGBA con transparencia
+    a RGB con fondo blanco.
+    """
+    # Separar canales
+    rgb = rgbA_img[..., :3].astype(np.float32)
+    alpha = rgbA_img[..., 3].astype(np.float32) / 255.0  # [0,1]
 
+    # Fondo blanco
+    white_bg = np.ones_like(rgb) * 255
 
+    # Alpha blending: out = fg * a + bg * (1 - a)
+    out = rgb * alpha[..., None] + white_bg * (1 - alpha[..., None])
+
+    return out.astype(np.uint8)
+
+def get_paddle_ocr():
+    global _PADDLE_OCR
+    if _PADDLE_OCR is None:
+        print("Initializing PaddleOCR ONCE...")
+        _PADDLE_OCR = PaddleOCR(
+            lang='ch',
+            ocr_version='PP-OCRv4'
+        )
+    return _PADDLE_OCR
+
+def detect_text_with_paddle(image):
+    start = time.time()
+    reader = get_paddle_ocr()
+    image = rgba_to_white_bg(image)
+
+    results = reader.predict(image)
+
+    print(results)
+    print(f"PaddleOCR detection time: {time.time() - start} seconds")
+    '''
 vid = cv2.VideoCapture(0)
 monitors = get_monitors()
 event_queue = queue.Queue()
-
+ocr_cmd = CanvasTextDetectionCommand()
 mainFrame = MainFrame(monitors[0].width, monitors[0].height)
 model = SmallClassifier()
 model.load_state_dict(torch.load("modelo_pointing_v2.pth"))
@@ -62,7 +104,6 @@ draw_size = 10  # Default draw size
 tool_status = ToolStatus(Tools.PENCIL)
 previous_tool = None
 current_comand = None
-
 timer = cv2.getTickCount()
 pointing_timer = cv2.getTickCount()
 start_timer = True
@@ -114,8 +155,6 @@ def handle_button_down(event: Event):
                                        tool_status.get_tool())
         command = canvas_handler.get_command()
         current_comand = command
-        if isinstance(current_comand, CanvasTextCommand):
-            current_comand.set_image(mainFrame.image)
         start_command(command)
 
         print(f"Tool used: {tool_status.get_tool()}")
@@ -140,7 +179,7 @@ def handle_button_down(event: Event):
         toggle_menu_command = ToggleableUIHandler(UIElement, event).get_command()
         toggle_menu_command.set_cursor(event.position)
         toggle_menu_command.execute()
-
+        print("Menu toggled", type(toggle_menu_command))
         menu_icon = toggle_menu_command.get_tool_selected()
         if menu_icon is None:
             return
@@ -152,23 +191,50 @@ def handle_button_down(event: Event):
         global previous_tool
         previous_tool = tool_status.get_tool()
         
+        if tool_type == Tools.ENCHANCED_PENCIL and previous_tool == Tools.ENCHANCED_PENCIL:
+            run_detection_from_canvas()
+            mainFrame.merge_temp_layer()
+        
         if tool_type == Tools.ENCHANCED_PENCIL:
             mainFrame.create_temp_layer(int(monitors[0].width * canvas_size_ratio), int(monitors[0].height * canvas_size_ratio), COLOR_TRANSPARENT)
             mainFrame.set_actual_layer(1)
-        else:
             
-            mainFrame.merge_temp_layer()
+        if tool_type == Tools.TEXT and previous_tool == Tools.TEXT:
+            run_detect_text_from_canvas()
+                
+        if tool_type == Tools.TEXT:
+            print("using text detection tool")
+            mainFrame.create_temp_layer(int(monitors[0].width * canvas_size_ratio), int(monitors[0].height * canvas_size_ratio), COLOR_TRANSPARENT)
+            mainFrame.set_actual_layer(1)
             
-        if tool_type == Tools.ENCHANCED_PENCIL and previous_tool == Tools.ENCHANCED_PENCIL:
-            run_detection_from_canvas()
-            return
-
         tool_status.set_tool(tool_type)
 
 def run_detection_from_canvas():
     print("Running sketch detection...")
     if current_comand and isinstance(current_comand, CanvasEnchancedPencilCommand):
         current_comand.draw_sketch_on_canvas()
+        mainFrame.merge_temp_layer()
+        switch_back_to_pencil(vertical_menu)
+
+def run_detect_text_from_canvas():
+    print("running text detection...")
+    texts_detected, bbox = ocr_cmd.detect(mainFrame.get_temp_layer().get_image())
+    if not texts_detected or bbox is None:
+        return
+    if current_comand and isinstance(current_comand, CanvasTxtCommand):
+        current_comand.draw_text_fit_bbox_pil(texts_detected, bbox)
+        mainFrame.merge_temp_layer()
+        switch_back_to_pencil(vertical_menu)
+
+def switch_back_to_pencil(menu: MenuToggleable | None = None):
+    global current_comand, previous_tool
+
+    tool_status.set_tool(Tools.PENCIL)
+    previous_tool = Tools.PENCIL
+    current_comand = None
+
+    if menu is not None:
+        menu.set_tool(Tools.PENCIL)
 
 def handle_scroll(event: Event):
     global color_picker
@@ -323,13 +389,14 @@ cubeta_de_color_icon = MenuIcon(Point(0, 0), Tools.FILL, icon_w, icon_h, "./asse
 selector_de_color_icon = MenuIcon(Point(0, 0), Tools.COLOR_PICKER, icon_w, icon_h, "./assets/selector_de_color.png")
 texto_ocr_icon = MenuIcon(Point(0, 0), Tools.TEXT, icon_w, icon_h, "./assets/texto_ocr.png")
 dibujo_asistido_yolo_icon = MenuIcon(Point(0, 0), Tools.ENCHANCED_PENCIL, icon_w, icon_h, "./assets/dibujo_asistido_yolo.png")
-
+clear_canvas_icon = MenuIcon(Point(0, 0), Tools.CLEAR_CANVAS, icon_w, icon_h, "./assets/clear.png")
 vertical_menu.add_element(pencil_icon)
 vertical_menu.add_element(borrador_icon)
 vertical_menu.add_element(cubeta_de_color_icon)
 vertical_menu.add_element(selector_de_color_icon)
 vertical_menu.add_element(texto_ocr_icon)
 vertical_menu.add_element(dibujo_asistido_yolo_icon)
+vertical_menu.add_element(clear_canvas_icon)
 mainFrame.add_UI_element(vertical_menu)
 
 key_listener = KeyHandler()
