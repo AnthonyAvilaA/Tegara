@@ -45,46 +45,7 @@ from definitions.Tools import Tools
 from definitions.Key import Key
 from paddleocr import PaddleOCR
 import numpy as np
-import time
-'''
-_PADDLE_OCR = None
-def rgba_to_white_bg(rgbA_img: np.ndarray) -> np.ndarray:
-    """
-    Convierte una imagen RGBA con transparencia
-    a RGB con fondo blanco.
-    """
-    # Separar canales
-    rgb = rgbA_img[..., :3].astype(np.float32)
-    alpha = rgbA_img[..., 3].astype(np.float32) / 255.0  # [0,1]
 
-    # Fondo blanco
-    white_bg = np.ones_like(rgb) * 255
-
-    # Alpha blending: out = fg * a + bg * (1 - a)
-    out = rgb * alpha[..., None] + white_bg * (1 - alpha[..., None])
-
-    return out.astype(np.uint8)
-
-def get_paddle_ocr():
-    global _PADDLE_OCR
-    if _PADDLE_OCR is None:
-        print("Initializing PaddleOCR ONCE...")
-        _PADDLE_OCR = PaddleOCR(
-            lang='ch',
-            ocr_version='PP-OCRv4'
-        )
-    return _PADDLE_OCR
-
-def detect_text_with_paddle(image):
-    start = time.time()
-    reader = get_paddle_ocr()
-    image = rgba_to_white_bg(image)
-
-    results = reader.predict(image)
-
-    print(results)
-    print(f"PaddleOCR detection time: {time.time() - start} seconds")
-    '''
 vid = cv2.VideoCapture(0)
 monitors = get_monitors()
 event_queue = queue.Queue()
