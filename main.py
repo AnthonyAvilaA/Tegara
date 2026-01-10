@@ -302,6 +302,13 @@ def control_mouse_event(event, x, y, flags, param):
 
 def handle_gesture(gesture: HandsGestures, menu: MenuToggleable = None):
     global prev_hand_size, prev_hand_center_y
+
+    current_tool = tool_status.get_tool()
+    if current_tool in TEMP_LAYER_TOOLS or current_tool == Tools.COLOR_PICKER:
+        # Solo permitir gestos auxiliares (ZOOM, ROTATE, SCROLL, IDLE)
+        # Ignorar gestos que cambien la herramienta (POINTING, ERASE, FILL)
+        if gesture in [HandsGestures.POINTING, HandsGestures.ERASE, HandsGestures.FILL]:
+            return
     
     gesture_tool = None
     match gesture:
